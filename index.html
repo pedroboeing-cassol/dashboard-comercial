@@ -309,7 +309,7 @@ td.sub{color:var(--a5);font-size:11px}
           </div>
           <div id="prod-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);max-height:220px;overflow-y:auto;margin-top:3px;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
         </div>
-        <button class="btn-apply" onclick="applyFilters()">Aplicar</button>
+        <button id="btn-apply-prod" class="btn-apply" onclick="applyFilters()" style="display:none">Filtrar produtos</button>
         <button class="btn-apply" onclick="clearFilters()" style="background:var(--card);border:1px solid var(--border2);color:var(--dim)">✕ Limpar</button>
       </div>
       <div id="metric-picker-wrap" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
@@ -555,6 +555,7 @@ function clearFilters(){
   document.getElementById("prod-suggestions").style.display="none";
   document.getElementById("cst-s").style.display="none";
   document.getElementById("cst-e").style.display="none";
+  fillSel("f-sub",Object.keys(idx.subMap).filter(Boolean).sort());
   buildProductList();
   applyFilters();
 }
@@ -619,6 +620,7 @@ async function loadAllData(){
   }
 
   document.getElementById("lupdate").textContent="Atualizado: "+new Date().toLocaleString("pt-BR");
+  buildIndexes();
   buildFilters();
   buildProductList();
   applyFilters();
@@ -677,9 +679,34 @@ function buildMetricPills(){
 // ══════════════════════════════════════════════════════════════
 // FILTERS
 // ══════════════════════════════════════════════════════════════
+// ÍNDICES PRÉ-COMPUTADOS — montados uma vez após carregar dados
+// ══════════════════════════════════════════════════════════════
+let idx = {
+  catMap: {},      // cat -> Set de índices de linha
+  subMap: {},      // sub -> Set de índices de linha
+  idMap:  {},      // id  -> Set de índices de linha
+  dates:  [],      // data de cada linha como string YYYY-MM-DD
+};
+
+function buildIndexes(){
+  idx.catMap={};idx.subMap={};idx.idMap={};idx.dates=[];
+  raw.forEach((r,i)=>{
+    idx.dates[i]=r[C.date];
+    const cat=r[C.cat]||"";
+    const sub=r[C.sub]||"";
+    const id=r[C.id]||"";
+    if(!idx.catMap[cat]) idx.catMap[cat]=new Set();
+    idx.catMap[cat].add(i);
+    if(!idx.subMap[sub]) idx.subMap[sub]=new Set();
+    idx.subMap[sub].add(i);
+    if(!idx.idMap[id]) idx.idMap[id]=new Set();
+    idx.idMap[id].add(i);
+  });
+}
+
 function buildFilters(){
-  fillSel("f-cat",[...new Set(raw.map(r=>r[C.cat]).filter(Boolean))].sort());
-  fillSel("f-sub",[...new Set(raw.map(r=>r[C.sub]).filter(Boolean))].sort());
+  fillSel("f-cat",Object.keys(idx.catMap).filter(Boolean).sort());
+  fillSel("f-sub",Object.keys(idx.subMap).filter(Boolean).sort());
 }
 
 function fillSel(id,opts){
@@ -695,11 +722,23 @@ let allProducts=[];
 function buildProductList(){
   const cat=document.getElementById("f-cat").value;
   const sub=document.getElementById("f-sub").value;
+
+  // Candidatos: interseção dos índices de cat e sub
+  let candidates;
+  if(cat && sub){
+    candidates=new Set([...idx.catMap[cat]||[]].filter(i=>idx.subMap[sub]&&idx.subMap[sub].has(i)));
+  } else if(cat){
+    candidates=idx.catMap[cat]||new Set();
+  } else if(sub){
+    candidates=idx.subMap[sub]||new Set();
+  } else {
+    candidates=null; // todos
+  }
+
   const seen=new Set();
   allProducts=[];
-  raw.forEach(r=>{
-    if(cat && r[C.cat]!==cat) return;
-    if(sub && r[C.sub]!==sub) return;
+  const source=candidates?[...candidates].map(i=>raw[i]):raw;
+  source.forEach(r=>{
     if(!seen.has(r[C.id])){
       seen.add(r[C.id]);
       allProducts.push({id:r[C.id], ttl:r[C.ttl]||r[C.id]});
@@ -715,40 +754,54 @@ function onProductSearch(){
     ? allProducts.filter(p=>p.ttl.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)).slice(0,25)
     : allProducts.slice(0,25);
   if(!matches.length){box.style.display="none";return;}
-  box.innerHTML=matches.map((p,i)=>{
+  box.innerHTML=matches.map(p=>{
     const safeId=p.id.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
     const safeTtl=p.ttl.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");
-    return`<div class="prod-suggestion-item${i===0?' active':''}" onclick="selectProduct('${safeId}','${safeTtl}')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;display:flex;flex-direction:column;gap:2px;transition:background .13s" onmouseover="this.style.background='rgba(79,142,247,.1)'" onmouseout="this.style.background=''"><span>${p.ttl}</span><small style="color:var(--muted);font-size:10px">${p.id}</small></div>`;
+    const already=selectedProducts.has(p.id);
+    return`<div onclick="selectProduct('${safeId}','${safeTtl}')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background .13s;opacity:${already?'.45':'1'}" onmouseover="this.style.background='rgba(79,142,247,.1)'" onmouseout="this.style.background=''"><div style="display:flex;flex-direction:column;gap:2px"><span>${p.ttl}</span><small style="color:var(--muted);font-size:10px">${p.id}</small></div>${already?'<span style="font-size:10px;color:var(--a3)">✓</span>':''}</div>`;
   }).join("");
   box.style.display="block";
 }
 
 function onProductKey(e){
-  if(e.key==="Escape"){document.getElementById("prod-suggestions").style.display="none";}
-  if(e.key==="Enter"){const first=document.querySelector(".prod-suggestion-item");if(first)first.click();e.preventDefault();}
+  if(e.key==="Escape") document.getElementById("prod-suggestions").style.display="none";
+  if(e.key==="Enter"){
+    const q=document.getElementById("f-pro-search").value.trim().toLowerCase();
+    const match=allProducts.find(p=>p.ttl.toLowerCase().includes(q)||p.id.toLowerCase().includes(q));
+    if(match) selectProduct(match.id,match.ttl);
+    e.preventDefault();
+  }
 }
 
 function selectProduct(id,ttl){
-  selectedProducts.add(id);
+  if(selectedProducts.has(id)) selectedProducts.delete(id);
+  else selectedProducts.add(id);
   document.getElementById("f-pro-search").value="";
   document.getElementById("prod-suggestions").style.display="none";
   renderProductTags();
-  applyFilters();
+  // Não chama applyFilters — usuário confirma com o botão
 }
 
 function removeProduct(id){
   selectedProducts.delete(id);
   renderProductTags();
-  applyFilters();
+  applyFilters(); // remover tag aplica imediatamente
 }
 
 function renderProductTags(){
   const wrap=document.getElementById("prod-tags");
-  if(!selectedProducts.size){wrap.innerHTML="";return;}
+  const btn=document.getElementById("btn-apply-prod");
+  if(!selectedProducts.size){
+    wrap.innerHTML="";
+    btn.style.display="none";
+    return;
+  }
+  btn.style.display="";
   wrap.innerHTML=[...selectedProducts].map(id=>{
-    const p=allProducts.find(x=>x.id===id)||{ttl:id};
-    const label=(p.ttl.length>28?p.ttl.substring(0,26)+"…":p.ttl);
-    return`<span class="prod-tag" style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--a1)">${label}<button onclick="removeProduct('${id.replace(/'/g,"\\'")}')" style="background:none;border:none;color:var(--a2);cursor:pointer;font-size:13px;line-height:1;padding:0" title="Remover">×</button></span>`;
+    const p=allProducts.find(x=>x.id===id)||{id,ttl:id};
+    const label=p.ttl.length>28?p.ttl.substring(0,26)+"…":p.ttl;
+    const safeId=id.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    return`<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--a1)">${label}<button onclick="removeProduct('${safeId}')" style="background:none;border:none;color:var(--a2);cursor:pointer;font-size:13px;line-height:1;padding:0">×</button></span>`;
   }).join(" ");
 }
 
@@ -761,11 +814,20 @@ document.getElementById("f-per").addEventListener("change",function(){
   const c=this.value==="custom";
   document.getElementById("cst-s").style.display=c?"":"none";
   document.getElementById("cst-e").style.display=c?"":"none";
+  if(this.value!=="custom") applyFilters();
+});
+
+document.getElementById("f-grp").addEventListener("change",function(){
+  if(filt.length) renderAll();
 });
 
 document.getElementById("f-cat").addEventListener("change",function(){
   const cat=this.value;
-  fillSel("f-sub",[...new Set(raw.filter(r=>!cat||r[C.cat]===cat).map(r=>r[C.sub]).filter(Boolean))].sort());
+  // Atualiza subcategorias disponíveis para esta categoria
+  const subs=cat
+    ? [...new Set([...(idx.catMap[cat]||[])].map(i=>raw[i][C.sub]).filter(Boolean))].sort()
+    : Object.keys(idx.subMap).filter(Boolean).sort();
+  fillSel("f-sub",subs);
   selectedProducts.clear();
   renderProductTags();
   buildProductList();
@@ -783,27 +845,32 @@ function applyFilters(){
   const per=document.getElementById("f-per").value;
   const cat=document.getElementById("f-cat").value;
   const sub=document.getElementById("f-sub").value;
+
+  // Calcular datas uma única vez, sem new Date() no loop
   const today=new Date();
-  let sd=null,ed=new Date(today);
+  let sdStr=null, edStr=null;
   if(per==="custom"){
-    const sv=document.getElementById("f-ds").value;
-    const ev=document.getElementById("f-de").value;
-    if(sv)sd=new Date(sv);
-    if(ev)ed=new Date(ev);
-  }else{
-    sd=new Date(today);
+    sdStr=document.getElementById("f-ds").value||null;
+    edStr=document.getElementById("f-de").value||null;
+  } else {
+    const sd=new Date(today);
     sd.setDate(sd.getDate()-parseInt(per));
+    sdStr=sd.toISOString().slice(0,10);
+    edStr=new Date(today.setDate(today.getDate()-1)).toISOString().slice(0,10);
   }
-  filt=raw.filter(r=>{
-    const d=new Date(r[C.date]);
-    if(sd&&d<sd)return false;
-    if(ed&&d>ed)return false;
-    if(cat&&r[C.cat]!==cat)return false;
-    if(sub&&r[C.sub]!==sub)return false;
-    if(selectedProducts.size&&!selectedProducts.has(r[C.id]))return false;
+
+  // Filtro ultra-rápido: compara strings YYYY-MM-DD diretamente
+  filt=raw.filter((r,i)=>{
+    const d=idx.dates[i];
+    if(sdStr && d<sdStr) return false;
+    if(edStr && d>edStr) return false;
+    if(cat && r[C.cat]!==cat) return false;
+    if(sub && r[C.sub]!==sub) return false;
+    if(selectedProducts.size && !selectedProducts.has(r[C.id])) return false;
     return true;
   });
-  page=1;pageCom=1;sCol=-1;
+
+  page=1;pageCom=1;sCol=-1;sColCom=-1;
   renderAll();
 }
 
