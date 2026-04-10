@@ -470,8 +470,10 @@ td.sub{color:var(--a5);font-size:11px}
 
     <!-- COMERCIAL VIEW -->
     <div id="view-comercial" style="display:none">
-      <p class="slabel">Visão Comercial</p>
-      <div class="kpi-grid" id="kpi-com" style="margin-bottom:24px">
+
+      <!-- KPIs -->
+      <p class="slabel">Visão Geral</p>
+      <div class="kpi-grid" style="margin-bottom:24px">
         <div class="kpi k1"><div class="kpi-lbl">Impressões Totais</div><div class="kpi-val" id="c-imp">—</div></div>
         <div class="kpi k3"><div class="kpi-lbl">Cliques Totais</div><div class="kpi-val" id="c-cli">—</div></div>
         <div class="kpi k5"><div class="kpi-lbl">Conversões</div><div class="kpi-val" id="c-cnv">—</div></div>
@@ -482,15 +484,20 @@ td.sub{color:var(--a5);font-size:11px}
         <div class="kpi k8"><div class="kpi-lbl">Taxa de Conversão</div><div class="kpi-val" id="c-tc">—</div><div class="kpi-unit">%</div></div>
       </div>
 
-      <!-- Comercial charts -->
-      <div class="charts-grid g2" style="margin-bottom:16px">
-        <div class="chcard tall">
+      <!-- CHARTS POR CATEGORIA -->
+      <p class="slabel">Por Categoria</p>
+      <div class="charts-grid g3" style="margin-bottom:16px">
+        <div class="chcard">
+          <p class="slabel">Impressões por Categoria</p>
+          <canvas id="cc-cat-imp"></canvas>
+        </div>
+        <div class="chcard">
+          <p class="slabel">Cliques por Categoria</p>
+          <canvas id="cc-cat-cli"></canvas>
+        </div>
+        <div class="chcard">
           <p class="slabel">Valor de Conversão por Categoria</p>
           <canvas id="cc-valcat"></canvas>
-        </div>
-        <div class="chcard tall">
-          <p class="slabel">Evolução de Valor de Conversão</p>
-          <canvas id="cc-evol"></canvas>
         </div>
       </div>
       <div class="charts-grid g3" style="margin-bottom:16px">
@@ -499,22 +506,32 @@ td.sub{color:var(--a5);font-size:11px}
           <canvas id="cc-convcat"></canvas>
         </div>
         <div class="chcard">
-          <p class="slabel">Participação por Categoria (Cliques)</p>
-          <canvas id="cc-pie"></canvas>
-        </div>
-        <div class="chcard">
           <p class="slabel">Ticket Médio por Categoria</p>
           <canvas id="cc-ticket"></canvas>
         </div>
+        <div class="chcard">
+          <p class="slabel">Participação por Categoria (Cliques)</p>
+          <canvas id="cc-pie"></canvas>
+        </div>
       </div>
 
-      <!-- Subcategoria comercial -->
+      <!-- CHARTS POR SUBCATEGORIA -->
       <p class="slabel">Por Subcategoria</p>
       <div class="charts-grid g3" style="margin-bottom:16px">
+        <div class="chcard">
+          <p class="slabel">Impressões por Subcategoria</p>
+          <canvas id="cc-sub-imp"></canvas>
+        </div>
+        <div class="chcard">
+          <p class="slabel">Cliques por Subcategoria</p>
+          <canvas id="cc-sub-cli"></canvas>
+        </div>
         <div class="chcard">
           <p class="slabel">Valor de Conversão por Subcategoria</p>
           <canvas id="cc-sub-vcv"></canvas>
         </div>
+      </div>
+      <div class="charts-grid g2" style="margin-bottom:16px">
         <div class="chcard">
           <p class="slabel">Conversões por Subcategoria</p>
           <canvas id="cc-sub-cnv"></canvas>
@@ -525,24 +542,71 @@ td.sub{color:var(--a5);font-size:11px}
         </div>
       </div>
 
-      <!-- Top produtos comercial -->
-      <p class="slabel">Produtos com Maior Valor de Conversão</p>
-      <div class="top10-grid" style="margin-bottom:24px">
-        <div class="top10-card">
-          <div class="top10-head"><span class="slabel" style="margin:0">Top 10 por Valor de Conversão</span></div>
-          <div id="com-top10-vcv"></div>
+      <!-- EVOLUÇÃO TEMPORAL -->
+      <div class="charts-grid g2" style="margin-bottom:16px">
+        <div class="chcard tall">
+          <p class="slabel">Evolução de Impressões × Cliques</p>
+          <canvas id="cc-evol-imp-cli"></canvas>
         </div>
-        <div class="top10-card">
-          <div class="top10-head"><span class="slabel" style="margin:0">Top 10 por Conversões</span></div>
-          <div id="com-top10-cnv"></div>
+        <div class="chcard tall">
+          <p class="slabel">Evolução de Conversões × Valor</p>
+          <canvas id="cc-evol"></canvas>
         </div>
       </div>
 
-      <!-- Comercial table -->
+      <!-- TOP 10 DINÂMICO -->
+      <p class="slabel">Rankings</p>
+      <div class="top10-grid" style="margin-bottom:24px">
+        <div class="top10-card">
+          <div class="top10-head">
+            <span class="slabel" style="margin:0">Top 10 Produtos</span>
+            <select id="com-top10-metric" onchange="renderComTop10()">
+              <option value="imp">Por Impressões</option>
+              <option value="cli">Por Cliques</option>
+              <option value="cnv">Por Conversões</option>
+              <option value="vcv">Por Valor de Conversão</option>
+            </select>
+          </div>
+          <div id="com-top10-body"></div>
+        </div>
+        <div class="top10-card">
+          <div class="top10-head">
+            <span class="slabel" style="margin:0">Top 10 Subcategorias</span>
+            <select id="com-top10-sub-metric" onchange="renderComTop10Sub()">
+              <option value="imp">Por Impressões</option>
+              <option value="cli">Por Cliques</option>
+              <option value="cnv">Por Conversões</option>
+              <option value="vcv">Por Valor de Conversão</option>
+            </select>
+          </div>
+          <div id="com-top10-sub-body"></div>
+        </div>
+      </div>
+
+      <!-- TABELA RESUMO POR PRODUTO -->
       <div class="tcard">
-        <div class="thead2">
+        <div class="thead2" style="flex-wrap:wrap;gap:10px">
           <p class="slabel" style="margin:0">Resumo por Produto</p>
-          <input class="tsearch" type="text" id="tsrch-com" placeholder="Buscar produto…" oninput="renderComTable()"/>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="com-sort-metric" onchange="renderComTable()" style="background:var(--surf);border:1px solid var(--border2);border-radius:6px;color:var(--txt);font-family:var(--fb);font-size:11px;padding:6px 10px;cursor:pointer">
+              <option value="">Ordenar por…</option>
+              <option value="imp_desc">↓ Mais impressões</option>
+              <option value="imp_asc">↑ Menos impressões</option>
+              <option value="cli_desc">↓ Mais cliques</option>
+              <option value="cli_asc">↑ Menos cliques</option>
+              <option value="cnv_desc">↓ Mais conversões</option>
+              <option value="vcv_desc">↓ Maior valor conversão</option>
+              <option value="tc_desc">↓ Maior taxa conv.</option>
+              <option value="tc_asc">↑ Menor taxa conv.</option>
+            </select>
+            <select id="com-filter-cat" onchange="renderComTable()" style="background:var(--surf);border:1px solid var(--border2);border-radius:6px;color:var(--txt);font-family:var(--fb);font-size:11px;padding:6px 10px;cursor:pointer">
+              <option value="">Todas categorias</option>
+            </select>
+            <select id="com-filter-sub" onchange="renderComTable()" style="background:var(--surf);border:1px solid var(--border2);border-radius:6px;color:var(--txt);font-family:var(--fb);font-size:11px;padding:6px 10px;cursor:pointer">
+              <option value="">Todas subcategorias</option>
+            </select>
+            <input class="tsearch" type="text" id="tsrch-com" placeholder="Buscar produto…" oninput="pageCom=1;renderComTable()" style="width:180px"/>
+          </div>
         </div>
         <div class="twrap"><table><thead id="th-com"></thead><tbody id="tb-com"></tbody></table></div>
         <div class="pag">
@@ -962,6 +1026,7 @@ function renderAll(){
     updComKPIs();
     drawComCharts();
     renderComTop10();
+    renderComTop10Sub();
     renderComTable();
   }
 }
@@ -1452,92 +1517,103 @@ function drawProdCompare(){
 // ══════════════════════════════════════════════════════════════
 function drawComCharts(){
   const cats=aggregateByCat();
+  const subs=aggregateBySub();
 
-  mkChart("cc-valcat","bar",{
-    labels:cats.sort((a,b)=>b.vcv-a.vcv).map(c=>c.cat),
-    datasets:[{label:"Valor de Conversão (R$)",data:cats.map(c=>+c.vcv.toFixed(2)),
-      backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:5}]
-  },{responsive:true,indexAxis:"y",plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#7880a0",font:{size:11}},grid:{color:"#222840"}}}
-  });
+  // helpers de gráfico horizontal rápido
+  const hbar=(id,lbls,data,color,fmtFn)=>mkChart(id,"bar",{
+    labels:lbls,
+    datasets:[{label:"",data,backgroundColor:Array.isArray(color)?color:lbls.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}]
+  },{responsive:true,indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtFn(ctx.parsed.x)}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:10},callback:v=>fmtFn(v)},grid:{color:"#222840"}},
+      y:{ticks:{color:"#7880a0",font:{size:10}},grid:{color:"#222840"}}}});
 
+  const vbar=(id,lbls,data,color,fmtFn)=>mkChart(id,"bar",{
+    labels:lbls,
+    datasets:[{label:"",data,backgroundColor:Array.isArray(color)?color:"rgba(79,142,247,.6)",borderRadius:4}]
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtFn(ctx.parsed.y)}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>fmtFn(v)},grid:{color:"#222840"}}}});
+
+  // POR CATEGORIA
+  const catsByImp=[...cats].sort((a,b)=>b.imp-a.imp);
+  hbar("cc-cat-imp",catsByImp.map(c=>c.cat),catsByImp.map(c=>c.imp),null,v=>fi(v));
+
+  const catsByCli=[...cats].sort((a,b)=>b.cli-a.cli);
+  hbar("cc-cat-cli",catsByCli.map(c=>c.cat),catsByCli.map(c=>c.cli),"rgba(62,207,142,.65)",v=>fi(v));
+
+  const catsByVcv=[...cats].sort((a,b)=>b.vcv-a.vcv);
+  hbar("cc-valcat",catsByVcv.map(c=>c.cat),catsByVcv.map(c=>+c.vcv.toFixed(2)),null,v=>"R$ "+f2(v));
+
+  const catsByCnv=[...cats].sort((a,b)=>b.cnv-a.cnv);
+  vbar("cc-convcat",catsByCnv.map(c=>c.cat),catsByCnv.map(c=>+c.cnv.toFixed(1)),"rgba(167,139,250,.65)",v=>f2(v));
+
+  const catsByTicket=[...cats].sort((a,b)=>b.ticket-a.ticket);
+  vbar("cc-ticket",catsByTicket.map(c=>c.cat),catsByTicket.map(c=>+c.ticket.toFixed(2)),"rgba(56,189,248,.6)",v=>"R$ "+f2(v));
+
+  // Pizza cliques por categoria
+  mkChart("cc-pie","doughnut",{
+    labels:cats.map(c=>c.cat),
+    datasets:[{data:cats.map(c=>c.cli),backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderColor:"#161b28",borderWidth:2}]
+  },{responsive:true,plugins:{
+    legend:{position:"bottom",labels:{color:"#7880a0",font:{size:10},padding:8}},
+    tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fi(ctx.parsed)} cliques`}}
+  }});
+
+  // POR SUBCATEGORIA
+  const subsByImp=[...subs].sort((a,b)=>b.imp-a.imp);
+  hbar("cc-sub-imp",subsByImp.map(s=>s.sub),subsByImp.map(s=>s.imp),null,v=>fi(v));
+
+  const subsByCli=[...subs].sort((a,b)=>b.cli-a.cli);
+  hbar("cc-sub-cli",subsByCli.map(s=>s.sub),subsByCli.map(s=>s.cli),"rgba(62,207,142,.65)",v=>fi(v));
+
+  const subsByVcv=[...subs].sort((a,b)=>b.vcv-a.vcv);
+  hbar("cc-sub-vcv",subsByVcv.map(s=>s.sub),subsByVcv.map(s=>+s.vcv.toFixed(2)),null,v=>"R$ "+f2(v));
+
+  const subsByCnv=[...subs].sort((a,b)=>b.cnv-a.cnv);
+  vbar("cc-sub-cnv",subsByCnv.map(s=>s.sub),subsByCnv.map(s=>+s.cnv.toFixed(1)),"rgba(167,139,250,.65)",v=>f2(v));
+
+  const subsByTicket=[...subs].sort((a,b)=>b.ticket-a.ticket);
+  vbar("cc-sub-ticket",subsByTicket.map(s=>s.sub),subsByTicket.map(s=>+s.ticket.toFixed(2)),"rgba(56,189,248,.6)",v=>"R$ "+f2(v));
+
+  // EVOLUÇÃO TEMPORAL
   const map={};
   filt.forEach(r=>{
     const k=gKey(r[C.date]);
-    if(!map[k]) map[k]={vcv:0,cnv:0};
+    if(!map[k]) map[k]={imp:0,cli:0,vcv:0,cnv:0};
+    map[k].imp+=parseFloat(r[C.imp])||0;
+    map[k].cli+=parseFloat(r[C.cli])||0;
     map[k].vcv+=parseFloat(r[C.vcv])||0;
     map[k].cnv+=parseFloat(r[C.cnv])||0;
   });
   const lbls=Object.keys(map).sort();
+
+  mkChart("cc-evol-imp-cli","line",{
+    labels:lbls,
+    datasets:[
+      {label:"Impressões",data:lbls.map(k=>map[k].imp),borderColor:"#4f8ef7",backgroundColor:"rgba(79,142,247,.1)",tension:.4,fill:true,yAxisID:"y"},
+      {label:"Cliques",data:lbls.map(k=>map[k].cli),borderColor:"#3ecf8e",backgroundColor:"rgba(62,207,142,.1)",tension:.4,fill:false,yAxisID:"y2"}
+    ]
+  },{responsive:true,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{color:"#7880a0",font:{size:11}}},tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===0?fi(ctx.parsed.y)+" imp.":fi(ctx.parsed.y)+" cliques"}}},
+    scales:{
+      x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4f8ef7",font:{size:10},callback:v=>fi(v)},grid:{color:"#222840"},position:"left"},
+      y2:{ticks:{color:"#3ecf8e",font:{size:10},callback:v=>fi(v)},grid:{drawOnChartArea:false},position:"right"}
+    }});
+
   mkChart("cc-evol","line",{
     labels:lbls,
     datasets:[
-      {label:"Val. Conversão (R$)",data:lbls.map(k=>+map[k].vcv.toFixed(2)),borderColor:"#3ecf8e",backgroundColor:"rgba(62,207,142,.1)",tension:.4,fill:true},
+      {label:"Val. Conversão (R$)",data:lbls.map(k=>+map[k].vcv.toFixed(2)),borderColor:"#3ecf8e",backgroundColor:"rgba(62,207,142,.1)",tension:.4,fill:true,yAxisID:"y"},
       {label:"Conversões",data:lbls.map(k=>+map[k].cnv.toFixed(2)),borderColor:"#f7c94f",backgroundColor:"rgba(247,201,79,.1)",tension:.4,fill:false,yAxisID:"y2"}
     ]
   },{responsive:true,interaction:{mode:"index",intersect:false},
-    plugins:{legend:{labels:{color:"#7880a0",font:{size:11}}}},
+    plugins:{legend:{labels:{color:"#7880a0",font:{size:11}}},tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===0?"R$ "+f2(ctx.parsed.y):f2(ctx.parsed.y)+" conv."}}},
     scales:{
       x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"},position:"left"},
+      y:{ticks:{color:"#3ecf8e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"},position:"left"},
       y2:{ticks:{color:"#f7c94f",font:{size:10}},grid:{drawOnChartArea:false},position:"right"}
-    }
-  });
-
-  const catsC=aggregateByCat().sort((a,b)=>b.cnv-a.cnv);
-  mkChart("cc-convcat","bar",{
-    labels:catsC.map(c=>c.cat),
-    datasets:[{label:"Conversões",data:catsC.map(c=>+c.cnv.toFixed(1)),
-      backgroundColor:"rgba(167,139,250,.65)",borderRadius:4}]
-  },{responsive:true,plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}}
-  });
-
-  mkChart("cc-pie","doughnut",{
-    labels:cats.map(c=>c.cat),
-    datasets:[{data:cats.map(c=>+c.cli.toFixed(0)),
-      backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),
-      borderColor:"#161b28",borderWidth:2}]
-  },{responsive:true,plugins:{legend:{position:"bottom",labels:{color:"#7880a0",font:{size:10},padding:8}}}});
-
-  mkChart("cc-ticket","bar",{
-    labels:cats.map(c=>c.cat),
-    datasets:[{label:"Ticket Médio (R$)",data:cats.map(c=>+c.ticket.toFixed(2)),
-      backgroundColor:"rgba(56,189,248,.6)",borderRadius:4}]
-  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.y)}}},
-    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}
-  });
-
-  // Subcategorias comercial
-  const subs=aggregateBySub().sort((a,b)=>b.vcv-a.vcv);
-  mkChart("cc-sub-vcv","bar",{
-    labels:subs.map(s=>s.sub),
-    datasets:[{label:"Val. Conversão (R$)",data:subs.map(s=>+s.vcv.toFixed(2)),
-      backgroundColor:subs.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}]
-  },{responsive:true,indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.x)}}},
-    scales:{x:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}},
-      y:{ticks:{color:"#7880a0",font:{size:10}},grid:{color:"#222840"}}}});
-
-  const subsCnv=[...subs].sort((a,b)=>b.cnv-a.cnv);
-  mkChart("cc-sub-cnv","bar",{
-    labels:subsCnv.map(s=>s.sub),
-    datasets:[{label:"Conversões",data:subsCnv.map(s=>+s.cnv.toFixed(1)),
-      backgroundColor:"rgba(167,139,250,.65)",borderRadius:4}]
-  },{responsive:true,plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}}});
-
-  const subsTicket=[...subs].sort((a,b)=>b.ticket-a.ticket);
-  mkChart("cc-sub-ticket","bar",{
-    labels:subsTicket.map(s=>s.sub),
-    datasets:[{label:"Ticket Médio (R$)",data:subsTicket.map(s=>+s.ticket.toFixed(2)),
-      backgroundColor:"rgba(56,189,248,.6)",borderRadius:4}]
-  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.y)}}},
-    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}});
+    }});
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1570,29 +1646,6 @@ function renderTop10Cat(){
       <div class="top10-name">${c.cat}</div>
       <div class="top10-bar-wrap"><div class="top10-bar" style="width:${max>0?(c[key]/max*100):0}%;background:${PALETTE[i%PALETTE.length]}"></div></div>
       <div class="top10-val">${key==="cst"||key==="vcv"?"R$ "+f2(c[key]):key==="roas"?f2(c[key])+"x":fi(c[key])}</div>
-    </div>`).join("");
-}
-
-function renderComTop10(){
-  const prods=aggregateByProd();
-  const byVcv=[...prods].sort((a,b)=>b.vcv-a.vcv).slice(0,10);
-  const maxV=byVcv[0]?byVcv[0].vcv:1;
-  document.getElementById("com-top10-vcv").innerHTML=byVcv.map((p,i)=>`
-    <div class="top10-row">
-      <div class="top10-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div>
-      <div class="top10-name" title="${p.ttl}">${p.ttl||p.id}</div>
-      <div class="top10-bar-wrap"><div class="top10-bar" style="width:${maxV>0?(p.vcv/maxV*100):0}%"></div></div>
-      <div class="top10-val">R$ ${f2(p.vcv)}</div>
-    </div>`).join("");
-
-  const byCnv=[...prods].sort((a,b)=>b.cnv-a.cnv).slice(0,10);
-  const maxC=byCnv[0]?byCnv[0].cnv:1;
-  document.getElementById("com-top10-cnv").innerHTML=byCnv.map((p,i)=>`
-    <div class="top10-row">
-      <div class="top10-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div>
-      <div class="top10-name" title="${p.ttl}">${p.ttl||p.id}</div>
-      <div class="top10-bar-wrap"><div class="top10-bar" style="width:${maxC>0?(p.cnv/maxC*100):0}%;background:#3ecf8e"></div></div>
-      <div class="top10-val">${f2(p.cnv)}</div>
     </div>`).join("");
 }
 
@@ -1703,56 +1756,109 @@ function sortBy(i){if(sCol===i)sAsc=!sAsc;else{sCol=i;sAsc=true;}renderTbl();}
 function pg(d){page+=d;renderTbl();}
 
 // ══════════════════════════════════════════════════════════════
-// TABLE — COMERCIAL
+// TABLE — COMERCIAL (reescrita completa)
 // ══════════════════════════════════════════════════════════════
+let sColCom=-1, sAscCom=true;
+
+// Colunas — mapeamento por chave do objeto agregado (não índice do raw)
 const COM_COLS=[
-  {h:"ID",          c:C.id,  t:"s"},
-  {h:"Título",      c:C.ttl, t:"s"},
-  {h:"Categoria",   c:C.cat, t:"s"},
-  {h:"Subcategoria",c:C.sub, t:"s"},
-  {h:"Impressões",  c:C.imp, t:"i"},
-  {h:"Cliques",     c:C.cli, t:"i"},
-  {h:"Conversões",  c:C.cnv, t:"n"},
-  {h:"Val. Conversão",c:C.vcv,t:"brl"},
-  {h:"Taxa Conv. %",c:C.tc,  t:"badge-tc"},
+  {h:"ID",           k:"id",     t:"s"},
+  {h:"Título",       k:"ttl",    t:"s"},
+  {h:"Categoria",    k:"cat",    t:"cat"},
+  {h:"Subcategoria", k:"sub",    t:"sub"},
+  {h:"Impressões",   k:"imp",    t:"rank-imp"},
+  {h:"Cliques",      k:"cli",    t:"rank-cli"},
+  {h:"Conversões",   k:"cnv",    t:"rank-cnv"},
+  {h:"Val. Conversão",k:"vcv",   t:"rank-vcv"},
+  {h:"Ticket Médio", k:"ticket", t:"brl"},
+  {h:"Taxa Conv. %", k:"tc",     t:"badge-tc"},
 ];
-let sColCom=-1,sAscCom=true;
+
+function buildComFilters(prods){
+  const cats=[...new Set(prods.map(p=>p.cat).filter(Boolean))].sort();
+  const subs=[...new Set(prods.map(p=>p.sub).filter(Boolean))].sort();
+  const fc=document.getElementById("com-filter-cat");
+  const fs=document.getElementById("com-filter-sub");
+  const curC=fc.value, curS=fs.value;
+  fc.innerHTML='<option value="">Todas categorias</option>';
+  cats.forEach(c=>{const o=document.createElement("option");o.value=o.textContent=c;if(c===curC)o.selected=true;fc.appendChild(o);});
+  fs.innerHTML='<option value="">Todas subcategorias</option>';
+  subs.forEach(s=>{const o=document.createElement("option");o.value=o.textContent=s;if(s===curS)o.selected=true;fs.appendChild(o);});
+}
 
 function renderComTable(){
-  const q=document.getElementById("tsrch-com").value.toLowerCase();
-  const prods=aggregateByProd().filter(p=>!q||(p.ttl||"").toLowerCase().includes(q)||(p.id||"").toLowerCase().includes(q));
+  // 1. Agregar por produto
+  let prods=aggregateByProd();
 
-  if(sColCom>=0){
-    const {c,t}=COM_COLS[sColCom];
+  // Popular filtros internos na primeira chamada
+  buildComFilters(prods);
+
+  // 2. Filtros internos da tabela
+  const q=(document.getElementById("tsrch-com").value||"").toLowerCase();
+  const fc=document.getElementById("com-filter-cat").value;
+  const fs=document.getElementById("com-filter-sub").value;
+  if(q) prods=prods.filter(p=>(p.ttl||"").toLowerCase().includes(q)||(p.id||"").toLowerCase().includes(q));
+  if(fc) prods=prods.filter(p=>p.cat===fc);
+  if(fs) prods=prods.filter(p=>p.sub===fs);
+
+  // 3. Ordenação — pelo seletor rápido OU pelo clique no cabeçalho
+  const sortSel=document.getElementById("com-sort-metric").value;
+  if(sortSel){
+    const [key,dir]=sortSel.split("_");
+    prods.sort((a,b)=>dir==="desc"?(b[key]||0)-(a[key]||0):(a[key]||0)-(b[key]||0));
+  } else if(sColCom>=0){
+    const {k,t}=COM_COLS[sColCom];
     prods.sort((a,b)=>{
-      const va=t==="s"?(a[Object.keys(a).find(k=>k===c)]||""):(a[Object.keys(a).find(k=>k===c)]||0);
-      const vb=t==="s"?(b[Object.keys(b).find(k=>k===c)]||""):(b[Object.keys(b).find(k=>k===c)]||0);
+      const va=t==="s"?(a[k]||""):(a[k]||0);
+      const vb=t==="s"?(b[k]||""):(b[k]||0);
       return sAscCom?(va>vb?1:-1):(va<vb?1:-1);
     });
+  } else {
+    // padrão: mais impressões primeiro
+    prods.sort((a,b)=>b.imp-a.imp);
   }
 
+  // 4. Calcular percentis para badges de ranking
+  const vals={imp:prods.map(p=>p.imp),cli:prods.map(p=>p.cli),cnv:prods.map(p=>p.cnv),vcv:prods.map(p=>p.vcv)};
+  const p80=(arr)=>{const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length*0.8)]||0;};
+  const p50=(arr)=>{const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length*0.5)]||0;};
+  const thresh={
+    imp:{hi:p80(vals.imp),mid:p50(vals.imp)},
+    cli:{hi:p80(vals.cli),mid:p50(vals.cli)},
+    cnv:{hi:p80(vals.cnv),mid:p50(vals.cnv)},
+    vcv:{hi:p80(vals.vcv),mid:p50(vals.vcv)},
+  };
+
+  function rankBadge(key,v){
+    const t=thresh[key];
+    if(v>=t.hi) return`<span class="badge-green">${key==="vcv"?"R$ "+f2(v):fi(v)}</span>`;
+    if(v>=t.mid) return`<span class="badge-yellow">${key==="vcv"?"R$ "+f2(v):fi(v)}</span>`;
+    return`<td class="n"><span style="color:var(--dim)">${key==="vcv"?"R$ "+f2(v):fi(v)}</span>`;
+  }
+
+  // 5. Render
   const tot=prods.length;
   const sl=prods.slice((pageCom-1)*PS,(pageCom-1)*PS+PS);
 
   document.getElementById("th-com").innerHTML="<tr>"+COM_COLS.map((cl,i)=>
-    `<th onclick="sortByCom(${i})" class="${sColCom===i?'srt':''}">${cl.h}${sColCom===i?(sAscCom?" ↑":" ↓"):""}</th>`
+    `<th onclick="sortByCom(${i})" class="${sColCom===i?'srt':''}" style="white-space:nowrap">${cl.h}${sColCom===i?(sAscCom?" ↑":" ↓"):""}</th>`
   ).join("")+"</tr>";
 
-  const colMap={[C.id]:"id",[C.ttl]:"ttl",[C.cat]:"cat",[C.sub]:"sub",[C.imp]:"imp",[C.cli]:"cli",[C.cnv]:"cnv",[C.vcv]:"vcv",[C.tc]:"tc"};
   const tb=document.getElementById("tb-com");
   if(!sl.length){
     tb.innerHTML=`<tr><td colspan="${COM_COLS.length}" style="text-align:center;padding:30px;color:var(--muted)">Sem dados.</td></tr>`;
   } else {
     tb.innerHTML=sl.map(p=>"<tr>"+COM_COLS.map(cl=>{
-      const key=colMap[cl.c];
-      const v=p[key];
+      const v=p[cl.k];
       const n=parseFloat(v)||0;
-      if(cl.t==="i") return`<td class="n">${fi(n)}</td>`;
-      if(cl.t==="n") return`<td class="n">${f2(n)}</td>`;
+      if(cl.t==="cat") return`<td class="cat">${v||"—"}</td>`;
+      if(cl.t==="sub") return`<td class="sub">${v||"—"}</td>`;
       if(cl.t==="brl") return`<td class="n">R$ ${f2(n)}</td>`;
       if(cl.t==="badge-tc") return`<td class="n">${tcBadge(n)}</td>`;
-      if(cl.c===C.cat) return`<td class="cat">${v||"—"}</td>`;
-      if(cl.c===C.sub) return`<td class="sub">${v||"—"}</td>`;
+      if(cl.t==="rank-imp") return`<td class="n">${rankBadge("imp",n)}</td>`;
+      if(cl.t==="rank-cli") return`<td class="n">${rankBadge("cli",n)}</td>`;
+      if(cl.t==="rank-cnv") return`<td class="n">${rankBadge("cnv",n)}</td>`;
+      if(cl.t==="rank-vcv") return`<td class="n">${rankBadge("vcv",n)}</td>`;
       return`<td class="d">${v||"—"}</td>`;
     }).join("")+"</tr>").join("");
   }
@@ -1764,8 +1870,43 @@ function renderComTable(){
   document.getElementById("bnx-com").disabled=pageCom>=tp;
 }
 
-function sortByCom(i){if(sColCom===i)sAscCom=!sAscCom;else{sColCom=i;sAscCom=true;}renderComTable();}
+function sortByCom(i){
+  // Reset seletor quando clica no cabeçalho
+  document.getElementById("com-sort-metric").value="";
+  if(sColCom===i) sAscCom=!sAscCom; else{sColCom=i;sAscCom=false;}
+  pageCom=1;
+  renderComTable();
+}
 function pgCom(d){pageCom+=d;renderComTable();}
+
+// ── TOP 10 COMERCIAL ─────────────────────────────────────────
+function renderComTop10(){
+  const metric=document.getElementById("com-top10-metric").value;
+  const prods=aggregateByProd().sort((a,b)=>(b[metric]||0)-(a[metric]||0)).slice(0,10);
+  const max=prods[0]?prods[0][metric]:1;
+  const isBrl=metric==="vcv";
+  document.getElementById("com-top10-body").innerHTML=prods.map((p,i)=>`
+    <div class="top10-row">
+      <div class="top10-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div>
+      <div class="top10-name" title="${p.ttl}">${p.ttl||p.id}</div>
+      <div class="top10-bar-wrap"><div class="top10-bar" style="width:${max>0?(p[metric]/max*100):0}%;background:${PALETTE[i%PALETTE.length]}"></div></div>
+      <div class="top10-val">${isBrl?"R$ "+f2(p[metric]):fi(p[metric])}</div>
+    </div>`).join("");
+}
+
+function renderComTop10Sub(){
+  const metric=document.getElementById("com-top10-sub-metric").value;
+  const subs=aggregateBySub().sort((a,b)=>(b[metric]||0)-(a[metric]||0)).slice(0,10);
+  const max=subs[0]?subs[0][metric]:1;
+  const isBrl=metric==="vcv";
+  document.getElementById("com-top10-sub-body").innerHTML=subs.map((s,i)=>`
+    <div class="top10-row">
+      <div class="top10-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div>
+      <div class="top10-name">${s.sub}</div>
+      <div class="top10-bar-wrap"><div class="top10-bar" style="width:${max>0?(s[metric]/max*100):0}%;background:${PALETTE[i%PALETTE.length]}"></div></div>
+      <div class="top10-val">${isBrl?"R$ "+f2(s[metric]):fi(s[metric])}</div>
+    </div>`).join("");
+}
 
 // ══════════════════════════════════════════════════════════════
 // FORMATTERS
