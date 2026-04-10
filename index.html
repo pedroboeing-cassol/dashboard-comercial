@@ -555,6 +555,7 @@ function clearFilters(){
   document.getElementById("prod-suggestions").style.display="none";
   document.getElementById("cst-s").style.display="none";
   document.getElementById("cst-e").style.display="none";
+  buildProductList();
   applyFilters();
 }
 
@@ -692,34 +693,39 @@ let selectedProducts=new Set();
 let allProducts=[];
 
 function buildProductList(){
+  const cat=document.getElementById("f-cat").value;
+  const sub=document.getElementById("f-sub").value;
   const seen=new Set();
   allProducts=[];
   raw.forEach(r=>{
-    if(!seen.has(r[C.id])){seen.add(r[C.id]);allProducts.push({id:r[C.id],ttl:r[C.ttl]||r[C.id]});}
+    if(cat && r[C.cat]!==cat) return;
+    if(sub && r[C.sub]!==sub) return;
+    if(!seen.has(r[C.id])){
+      seen.add(r[C.id]);
+      allProducts.push({id:r[C.id], ttl:r[C.ttl]||r[C.id]});
+    }
   });
   allProducts.sort((a,b)=>a.ttl.localeCompare(b.ttl));
 }
 
 function onProductSearch(){
   const q=document.getElementById("f-pro-search").value.trim().toLowerCase();
-  const cat=document.getElementById("f-cat").value;
-  const sub=document.getElementById("f-sub").value;
   const box=document.getElementById("prod-suggestions");
-  const pool=allProducts.filter(p=>{
-    const rows=raw.filter(r=>r[C.id]===p.id);
-    if(cat&&!rows.some(r=>r[C.cat]===cat))return false;
-    if(sub&&!rows.some(r=>r[C.sub]===sub))return false;
-    return true;
-  });
-  const matches=q?pool.filter(p=>p.ttl.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)).slice(0,20):pool.slice(0,20);
+  const matches=q
+    ? allProducts.filter(p=>p.ttl.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)).slice(0,25)
+    : allProducts.slice(0,25);
   if(!matches.length){box.style.display="none";return;}
-  box.innerHTML=matches.map((p,i)=>`<div class="prod-suggestion-item${i===0?' active':''}" onclick="selectProduct('${p.id.replace(/'/g,"\\'")}','${p.ttl.replace(/'/g,"\\'").replace(/"/g,'\"')}')">${p.ttl}<small>${p.id}</small></div>`).join("");
+  box.innerHTML=matches.map((p,i)=>{
+    const safeId=p.id.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    const safeTtl=p.ttl.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");
+    return`<div class="prod-suggestion-item${i===0?' active':''}" onclick="selectProduct('${safeId}','${safeTtl}')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;display:flex;flex-direction:column;gap:2px;transition:background .13s" onmouseover="this.style.background='rgba(79,142,247,.1)'" onmouseout="this.style.background=''"><span>${p.ttl}</span><small style="color:var(--muted);font-size:10px">${p.id}</small></div>`;
+  }).join("");
   box.style.display="block";
 }
 
 function onProductKey(e){
   if(e.key==="Escape"){document.getElementById("prod-suggestions").style.display="none";}
-  if(e.key==="Enter"){const first=document.querySelector(".prod-suggestion-item.active");if(first)first.click();e.preventDefault();}
+  if(e.key==="Enter"){const first=document.querySelector(".prod-suggestion-item");if(first)first.click();e.preventDefault();}
 }
 
 function selectProduct(id,ttl){
@@ -727,11 +733,13 @@ function selectProduct(id,ttl){
   document.getElementById("f-pro-search").value="";
   document.getElementById("prod-suggestions").style.display="none";
   renderProductTags();
+  applyFilters();
 }
 
 function removeProduct(id){
   selectedProducts.delete(id);
   renderProductTags();
+  applyFilters();
 }
 
 function renderProductTags(){
@@ -739,8 +747,8 @@ function renderProductTags(){
   if(!selectedProducts.size){wrap.innerHTML="";return;}
   wrap.innerHTML=[...selectedProducts].map(id=>{
     const p=allProducts.find(x=>x.id===id)||{ttl:id};
-    const label=p.ttl.length>30?p.ttl.substring(0,28)+"…":p.ttl;
-    return`<span class="prod-tag">${label}<button onclick="removeProduct('${id}');applyFilters()" title="Remover">×</button></span>`;
+    const label=(p.ttl.length>28?p.ttl.substring(0,26)+"…":p.ttl);
+    return`<span class="prod-tag" style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--a1)">${label}<button onclick="removeProduct('${id.replace(/'/g,"\\'")}')" style="background:none;border:none;color:var(--a2);cursor:pointer;font-size:13px;line-height:1;padding:0" title="Remover">×</button></span>`;
   }).join(" ");
 }
 
@@ -754,9 +762,21 @@ document.getElementById("f-per").addEventListener("change",function(){
   document.getElementById("cst-s").style.display=c?"":"none";
   document.getElementById("cst-e").style.display=c?"":"none";
 });
+
 document.getElementById("f-cat").addEventListener("change",function(){
   const cat=this.value;
   fillSel("f-sub",[...new Set(raw.filter(r=>!cat||r[C.cat]===cat).map(r=>r[C.sub]).filter(Boolean))].sort());
+  selectedProducts.clear();
+  renderProductTags();
+  buildProductList();
+  applyFilters();
+});
+
+document.getElementById("f-sub").addEventListener("change",function(){
+  selectedProducts.clear();
+  renderProductTags();
+  buildProductList();
+  applyFilters();
 });
 
 function applyFilters(){
