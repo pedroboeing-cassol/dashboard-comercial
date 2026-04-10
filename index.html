@@ -379,6 +379,48 @@ td.sub{color:var(--a5);font-size:11px}
         </div>
       </div>
 
+      <!-- CHARTS ROW 4 — SUBCATEGORIA -->
+      <p class="slabel">Por Subcategoria</p>
+      <div class="charts-grid g3" style="margin-bottom:16px">
+        <div class="chcard">
+          <p class="slabel">ROAS por Subcategoria</p>
+          <canvas id="ch-sub-roas"></canvas>
+        </div>
+        <div class="chcard">
+          <p class="slabel">CTR por Subcategoria</p>
+          <canvas id="ch-sub-ctr"></canvas>
+        </div>
+        <div class="chcard">
+          <p class="slabel">CPC por Subcategoria</p>
+          <canvas id="ch-sub-cpc"></canvas>
+        </div>
+      </div>
+
+      <!-- CHARTS ROW 5 — COMPARAÇÃO DE PRODUTOS -->
+      <div id="ch-prod-compare-wrap" style="display:none;margin-bottom:16px">
+        <p class="slabel">Comparação entre Produtos Selecionados</p>
+        <div class="charts-grid g2">
+          <div class="chcard">
+            <p class="slabel">Custo × Valor de Conversão</p>
+            <canvas id="ch-prod-cst-vcv"></canvas>
+          </div>
+          <div class="chcard">
+            <p class="slabel">ROAS × CTR × Taxa de Conversão</p>
+            <canvas id="ch-prod-perf"></canvas>
+          </div>
+        </div>
+        <div class="charts-grid g2" style="margin-top:16px">
+          <div class="chcard">
+            <p class="slabel">Evolução de Custo por Produto</p>
+            <canvas id="ch-prod-timeline-cst"></canvas>
+          </div>
+          <div class="chcard">
+            <p class="slabel">Evolução de Conversões por Produto</p>
+            <canvas id="ch-prod-timeline-cnv"></canvas>
+          </div>
+        </div>
+      </div>
+
       <!-- TOP 10 -->
       <p class="slabel">Rankings Dinâmicos</p>
       <div class="top10-grid">
@@ -463,6 +505,23 @@ td.sub{color:var(--a5);font-size:11px}
         <div class="chcard">
           <p class="slabel">Ticket Médio por Categoria</p>
           <canvas id="cc-ticket"></canvas>
+        </div>
+      </div>
+
+      <!-- Subcategoria comercial -->
+      <p class="slabel">Por Subcategoria</p>
+      <div class="charts-grid g3" style="margin-bottom:16px">
+        <div class="chcard">
+          <p class="slabel">Valor de Conversão por Subcategoria</p>
+          <canvas id="cc-sub-vcv"></canvas>
+        </div>
+        <div class="chcard">
+          <p class="slabel">Conversões por Subcategoria</p>
+          <canvas id="cc-sub-cnv"></canvas>
+        </div>
+        <div class="chcard">
+          <p class="slabel">Ticket Médio por Subcategoria</p>
+          <canvas id="cc-sub-ticket"></canvas>
         </div>
       </div>
 
@@ -990,6 +1049,27 @@ function gKey(ds){
 }
 function fd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 
+function aggregateBySub(){
+  const map={};
+  filt.forEach(r=>{
+    const k=r[C.sub]||"(s/subcat)";
+    if(!map[k]) map[k]={sub:k,cst:0,imp:0,cli:0,cnv:0,vcv:0};
+    map[k].cst+=parseFloat(r[C.cst])||0;
+    map[k].imp+=parseFloat(r[C.imp])||0;
+    map[k].cli+=parseFloat(r[C.cli])||0;
+    map[k].cnv+=parseFloat(r[C.cnv])||0;
+    map[k].vcv+=parseFloat(r[C.vcv])||0;
+  });
+  return Object.values(map).map(c=>({
+    ...c,
+    ctr:c.imp>0?(c.cli/c.imp)*100:0,
+    cpc:c.cli>0?c.cst/c.cli:0,
+    roas:c.cst>0?c.vcv/c.cst:0,
+    tc:c.cli>0?(c.cnv/c.cli)*100:0,
+    ticket:c.cnv>0?c.vcv/c.cnv:0,
+  }));
+}
+
 function aggregateByCat(){
   const map={};
   filt.forEach(r=>{
@@ -1040,6 +1120,8 @@ function drawAllCharts(){
   drawCpcChart();
   drawMultiChart();
   drawTaxaConvChart();
+  drawSubCharts();
+  drawProdCompare();
 }
 
 function chartOpts(extra={}){
@@ -1113,7 +1195,10 @@ function drawPieChart(){
       backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),
       borderColor:"#161b28",borderWidth:2}]
   },{responsive:true,
-    plugins:{legend:{position:"bottom",labels:{color:"#7880a0",font:{size:10},padding:10}}}
+    plugins:{
+      legend:{position:"bottom",labels:{color:"#7880a0",font:{size:10},padding:10}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.label}: R$ ${f2(ctx.parsed)}`}}
+    }
   });
 }
 
@@ -1245,6 +1330,124 @@ function drawTaxaConvChart(){
 }
 
 // ══════════════════════════════════════════════════════════════
+// CHARTS — SUBCATEGORIA (PERFORMANCE)
+// ══════════════════════════════════════════════════════════════
+function drawSubCharts(){
+  const subs=aggregateBySub();
+  const byRoas=[...subs].sort((a,b)=>b.roas-a.roas);
+  mkChart("ch-sub-roas","bar",{
+    labels:byRoas.map(s=>s.sub),
+    datasets:[{label:"ROAS",data:byRoas.map(s=>+s.roas.toFixed(2)),
+      backgroundColor:byRoas.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:5}]
+  },{responsive:true,indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>f2(ctx.parsed.x)+"x"}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:10},callback:v=>v+"x"},grid:{color:"#222840"}},
+      y:{ticks:{color:"#7880a0",font:{size:10}},grid:{color:"#222840"}}}});
+
+  const byCtr=[...subs].sort((a,b)=>b.ctr-a.ctr);
+  mkChart("ch-sub-ctr","bar",{
+    labels:byCtr.map(s=>s.sub),
+    datasets:[{label:"CTR %",data:byCtr.map(s=>+s.ctr.toFixed(2)),
+      backgroundColor:"rgba(167,139,250,.6)",borderRadius:4}]
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>f2(ctx.parsed.y)+"%"}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>v+"%"},grid:{color:"#222840"}}}});
+
+  const byCpc=[...subs].sort((a,b)=>b.cpc-a.cpc);
+  mkChart("ch-sub-cpc","bar",{
+    labels:byCpc.map(s=>s.sub),
+    datasets:[{label:"CPC (R$)",data:byCpc.map(s=>+s.cpc.toFixed(2)),
+      backgroundColor:"rgba(56,189,248,.6)",borderRadius:4}]
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.y)}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}});
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHARTS — COMPARAÇÃO DE PRODUTOS SELECIONADOS
+// ══════════════════════════════════════════════════════════════
+function drawProdCompare(){
+  const wrap=document.getElementById("ch-prod-compare-wrap");
+  if(!selectedProducts.size){wrap.style.display="none";return;}
+  wrap.style.display="block";
+
+  // Agrega por produto (apenas selecionados)
+  const prods=aggregateByProd().filter(p=>selectedProducts.has(p.id));
+  if(!prods.length){wrap.style.display="none";return;}
+
+  const labels=prods.map(p=>p.ttl.length>22?p.ttl.substring(0,20)+"…":p.ttl);
+
+  // Gráfico 1 — Custo × Valor de Conversão (barras agrupadas)
+  mkChart("ch-prod-cst-vcv","bar",{
+    labels,
+    datasets:[
+      {label:"Custo (R$)",data:prods.map(p=>+p.cst.toFixed(2)),backgroundColor:"rgba(79,142,247,.7)",borderRadius:4},
+      {label:"Val. Conversão (R$)",data:prods.map(p=>+p.vcv.toFixed(2)),backgroundColor:"rgba(62,207,142,.7)",borderRadius:4}
+    ]
+  },{responsive:true,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{color:"#7880a0",font:{size:11}}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: R$ ${f2(ctx.parsed.y)}`}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}});
+
+  // Gráfico 2 — ROAS × CTR × Taxa de Conversão (radar)
+  mkChart("ch-prod-perf","radar",{
+    labels:["ROAS","CTR %","Taxa Conv. %","CPC (inv.)","CPM (inv.)"],
+    datasets:prods.map((p,i)=>{
+      const maxCpc=Math.max(...prods.map(x=>x.cpc))||1;
+      const maxCpm=Math.max(...prods.map(x=>p.cpm||0))||1;
+      return{
+        label:p.ttl.length>18?p.ttl.substring(0,16)+"…":p.ttl,
+        data:[p.roas,p.ctr,p.tc,maxCpc>0?(1-(p.cpc/maxCpc))*10:0,maxCpm>0?(1-((p.cpm||0)/maxCpm))*10:0],
+        borderColor:PALETTE[i%PALETTE.length],
+        backgroundColor:PALETTE[i%PALETTE.length]+"33",
+        pointBackgroundColor:PALETTE[i%PALETTE.length],
+        borderWidth:2,
+      };
+    })
+  },{responsive:true,
+    plugins:{legend:{labels:{color:"#7880a0",font:{size:10}}}},
+    scales:{r:{ticks:{color:"#4a526e",font:{size:9},backdropColor:"transparent"},
+      grid:{color:"#222840"},pointLabels:{color:"#7880a0",font:{size:10}}}}});
+
+  // Gráfico 3 & 4 — Evolução temporal por produto
+  const timeMap={};
+  filt.filter(r=>selectedProducts.has(r[C.id])).forEach(r=>{
+    const k=gKey(r[C.date]);
+    if(!timeMap[k]) timeMap[k]={};
+    const id=r[C.id];
+    if(!timeMap[k][id]) timeMap[k][id]={cst:0,cnv:0};
+    timeMap[k][id].cst+=parseFloat(r[C.cst])||0;
+    timeMap[k][id].cnv+=parseFloat(r[C.cnv])||0;
+  });
+  const timeLbls=Object.keys(timeMap).sort();
+
+  mkChart("ch-prod-timeline-cst","line",{
+    labels:timeLbls,
+    datasets:prods.map((p,i)=>({
+      label:p.ttl.length>22?p.ttl.substring(0,20)+"…":p.ttl,
+      data:timeLbls.map(k=>+((timeMap[k]&&timeMap[k][p.id]?timeMap[k][p.id].cst:0)).toFixed(2)),
+      borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length]+"22",
+      tension:.4,fill:false,pointRadius:3,borderWidth:2
+    }))
+  },{responsive:true,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{color:"#7880a0",font:{size:10}}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: R$ ${f2(ctx.parsed.y)}`}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}});
+
+  mkChart("ch-prod-timeline-cnv","line",{
+    labels:timeLbls,
+    datasets:prods.map((p,i)=>({
+      label:p.ttl.length>22?p.ttl.substring(0,20)+"…":p.ttl,
+      data:timeLbls.map(k=>+((timeMap[k]&&timeMap[k][p.id]?timeMap[k][p.id].cnv:0)).toFixed(2)),
+      borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length]+"22",
+      tension:.4,fill:false,pointRadius:3,borderWidth:2
+    }))
+  },{responsive:true,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{color:"#7880a0",font:{size:10}}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}}});
+}
+
+// ══════════════════════════════════════════════════════════════
 // CHARTS — COMERCIAL
 // ══════════════════════════════════════════════════════════════
 function drawComCharts(){
@@ -1303,10 +1506,38 @@ function drawComCharts(){
     labels:cats.map(c=>c.cat),
     datasets:[{label:"Ticket Médio (R$)",data:cats.map(c=>+c.ticket.toFixed(2)),
       backgroundColor:"rgba(56,189,248,.6)",borderRadius:4}]
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.y)}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}
+  });
+
+  // Subcategorias comercial
+  const subs=aggregateBySub().sort((a,b)=>b.vcv-a.vcv);
+  mkChart("cc-sub-vcv","bar",{
+    labels:subs.map(s=>s.sub),
+    datasets:[{label:"Val. Conversão (R$)",data:subs.map(s=>+s.vcv.toFixed(2)),
+      backgroundColor:subs.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}]
+  },{responsive:true,indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.x)}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}},
+      y:{ticks:{color:"#7880a0",font:{size:10}},grid:{color:"#222840"}}}});
+
+  const subsCnv=[...subs].sort((a,b)=>b.cnv-a.cnv);
+  mkChart("cc-sub-cnv","bar",{
+    labels:subsCnv.map(s=>s.sub),
+    datasets:[{label:"Conversões",data:subsCnv.map(s=>+s.cnv.toFixed(1)),
+      backgroundColor:"rgba(167,139,250,.65)",borderRadius:4}]
   },{responsive:true,plugins:{legend:{display:false}},
     scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}}
-  });
+      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}}});
+
+  const subsTicket=[...subs].sort((a,b)=>b.ticket-a.ticket);
+  mkChart("cc-sub-ticket","bar",{
+    labels:subsTicket.map(s=>s.sub),
+    datasets:[{label:"Ticket Médio (R$)",data:subsTicket.map(s=>+s.ticket.toFixed(2)),
+      backgroundColor:"rgba(56,189,248,.6)",borderRadius:4}]
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.y)}}},
+    scales:{x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}}});
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1418,7 +1649,12 @@ const TCOLS=[
 
 function renderTbl(){
   const q=document.getElementById("tsrch").value.toLowerCase();
-  let rows=filt.filter(r=>!q||(r[C.ttl]||"").toLowerCase().includes(q)||(r[C.id]||"").toLowerCase().includes(q));
+  // Se há produtos selecionados, tabela mostra só eles (agregados por produto×data)
+  let rows=filt.filter(r=>{
+    if(selectedProducts.size && !selectedProducts.has(r[C.id])) return false;
+    if(q && !(r[C.ttl]||"").toLowerCase().includes(q) && !(r[C.id]||"").toLowerCase().includes(q)) return false;
+    return true;
+  });
   if(sCol>=0){
     const {c,t}=TCOLS[sCol];
     rows=[...rows].sort((a,b)=>{
