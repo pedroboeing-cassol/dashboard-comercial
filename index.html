@@ -240,7 +240,13 @@ td.sub{color:var(--a5);font-size:11px}
     <div class="login-logo">ECOMM Dashboard</div>
     <div class="login-sub">Cassol · Acesso Restrito</div>
     <div class="login-field"><label>Usuário</label><input type="text" id="l-user" placeholder="Login"/></div>
-    <div class="login-field"><label>Senha</label><input type="password" id="l-pass" placeholder="Senha"/></div>
+    <div class="login-field">
+      <label>Senha</label>
+      <div style="position:relative">
+        <input type="password" id="l-pass" placeholder="Senha" style="width:100%;padding-right:42px"/>
+        <button onclick="togglePass()" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--dim);font-size:15px;padding:0;line-height:1" id="pass-eye">👁</button>
+      </div>
+    </div>
     <button class="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="l-err"></div>
   </div>
@@ -294,6 +300,13 @@ td.sub{color:var(--a5);font-size:11px}
           <input type="text" id="f-pro-search" placeholder="Digite nome ou ID do produto…" oninput="onProductSearch()"/>
         </div>
         <button class="btn-apply" onclick="applyFilters()">Aplicar</button>
+        <button class="btn-apply" onclick="clearFilters()" style="background:var(--card);border:1px solid var(--border2);color:var(--dim)">✕ Limpar</button>
+      </div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;display:flex;align-items:center;gap:10px">
+        <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap">ID da Planilha</label>
+        <input type="text" id="sheet-id-input" placeholder="Cole aqui o ID do Google Sheets…" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:6px;color:var(--txt);font-family:var(--fb);font-size:12px;padding:7px 12px"/>
+        <button onclick="applySheetId()" style="background:var(--a3);color:#fff;font-family:var(--fh);font-size:12px;font-weight:700;border:none;border-radius:6px;padding:7px 16px;cursor:pointer;white-space:nowrap">Conectar</button>
+        <span id="sheet-id-status" style="font-size:11px;color:var(--muted)"></span>
       </div>
       <div id="metric-picker-wrap" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Métricas visíveis nos gráficos</div>
@@ -486,8 +499,9 @@ td.sub{color:var(--a5);font-size:11px}
 // ══════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════
-const SHEET_ID   = "COLE_AQUI_O_ID_DA_PLANILHA";
-const SHEET_TABS = ["2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10","2026-11","2026-12"];
+const SHEET_ID_DEFAULT = "1xR3KXz4R0RvFx37rhXR-CqRM8YtJFPJoXIOWvR_6BG0";
+let SHEET_ID_DYNAMIC   = SHEET_ID_DEFAULT;
+const SHEET_TABS = ["2026-04"];
 const RELOAD_INTERVAL = 60 * 60 * 1000; // 1h
 
 // ══════════════════════════════════════════════════════════════
@@ -501,10 +515,22 @@ function doLogin(){
   if(u===CREDS.user && p===CREDS.pass){
     document.getElementById("login-screen").style.display="none";
     document.getElementById("app").style.display="block";
+    if(SHEET_ID_DEFAULT!=="COLE_AQUI_O_ID_DA_PLANILHA"){
+      document.getElementById("sheet-id-input").value=SHEET_ID_DEFAULT;
+      SHEET_ID_DYNAMIC=SHEET_ID_DEFAULT;
+      document.getElementById("sheet-id-status").textContent="✓ ID configurado no código";
+    }
     initApp();
   } else {
     document.getElementById("l-err").textContent="Usuário ou senha incorretos.";
   }
+}
+
+function togglePass(){
+  const inp=document.getElementById("l-pass");
+  const eye=document.getElementById("pass-eye");
+  if(inp.type==="password"){inp.type="text";eye.textContent="🙈";}
+  else{inp.type="password";eye.textContent="👁";}
 }
 document.getElementById("l-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 document.getElementById("l-user").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
@@ -514,6 +540,25 @@ function doLogout(){
   document.getElementById("l-user").value="";
   document.getElementById("l-pass").value="";
   document.getElementById("l-err").textContent="";
+}
+
+function clearFilters(){
+  document.getElementById("f-per").value="15";
+  document.getElementById("f-grp").value="day";
+  document.getElementById("f-cat").value="";
+  document.getElementById("f-sub").value="";
+  document.getElementById("f-pro-search").value="";
+  document.getElementById("cst-s").style.display="none";
+  document.getElementById("cst-e").style.display="none";
+  applyFilters();
+}
+
+function applySheetId(){
+  const val=document.getElementById("sheet-id-input").value.trim();
+  if(!val){ document.getElementById("sheet-id-status").textContent="⚠ Cole um ID válido."; return; }
+  SHEET_ID_DYNAMIC=val;
+  document.getElementById("sheet-id-status").textContent="⏳ Conectando…";
+  loadAllData();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -572,6 +617,7 @@ async function loadAllData(){
   }
 
   document.getElementById("lupdate").textContent="Atualizado: "+new Date().toLocaleString("pt-BR");
+  document.getElementById("sheet-id-status").textContent="✓ Conectado";
   buildFilters();
   applyFilters();
   document.getElementById("loader").style.display="none";
@@ -580,7 +626,8 @@ async function loadAllData(){
 
 async function fetchTab(tab){
   try{
-    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+    const id=SHEET_ID_DYNAMIC;
+    const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
     const r=await fetch(url);
     if(!r.ok) return null;
     const csv=await r.text();
