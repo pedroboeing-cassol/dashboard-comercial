@@ -212,7 +212,13 @@ td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--fh);fo
 td.d{color:var(--txt2);font-size:11.5px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
 td.cat{font-weight:600;color:var(--a1);font-size:11.5px}
 td.sub{color:var(--a5);font-size:11px}
-.badge-red{background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.prod-suggestion-item{padding:9px 14px;font-size:12px;cursor:pointer;color:var(--txt2);border-bottom:1px solid var(--border);transition:background .13s}
+.prod-suggestion-item:hover,.prod-suggestion-item.active{background:rgba(79,142,247,.12);color:var(--txt)}
+.prod-suggestion-item small{color:var(--muted);margin-left:6px;font-size:10px}
+.prod-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,.18);border:1px solid rgba(79,142,247,.35);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a1);font-weight:600;white-space:nowrap}
+.prod-tag button{background:none;border:none;color:var(--a1);cursor:pointer;font-size:13px;line-height:1;padding:0;opacity:.7}
+.prod-tag button:hover{opacity:1}
+
 .badge-yellow{background:rgba(245,158,11,.15);color:#fbbf24;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
 .badge-green{background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
 .pag{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted)}
@@ -295,18 +301,16 @@ td.sub{color:var(--a5);font-size:11px}
         </div>
         <div class="fg fg-sm"><label>Categoria</label><select id="f-cat"><option value="">Todas</option></select></div>
         <div class="fg fg-sm"><label>Subcategoria</label><select id="f-sub"><option value="">Todas</option></select></div>
-        <div class="fg fg-lg">
-          <label>Produto (nome ou ID)</label>
-          <input type="text" id="f-pro-search" placeholder="Digite nome ou ID do produto…" oninput="onProductSearch()"/>
+        <div class="fg fg-lg" style="position:relative">
+          <label>Produto (nome ou ID) — múltiplos</label>
+          <div id="prod-tags-wrap" style="display:flex;flex-wrap:wrap;gap:5px;min-height:36px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:5px 8px;cursor:text;align-items:center" onclick="document.getElementById('f-pro-search').focus()">
+            <div id="prod-tags"></div>
+            <input type="text" id="f-pro-search" placeholder="Digite nome ou ID…" oninput="onProductSearch()" onkeydown="onProductKey(event)" autocomplete="off" style="border:none;background:transparent;color:var(--txt);font-family:var(--fb);font-size:12.5px;outline:none;min-width:160px;flex:1;padding:2px 4px"/>
+          </div>
+          <div id="prod-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);max-height:220px;overflow-y:auto;margin-top:3px;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
         </div>
         <button class="btn-apply" onclick="applyFilters()">Aplicar</button>
         <button class="btn-apply" onclick="clearFilters()" style="background:var(--card);border:1px solid var(--border2);color:var(--dim)">✕ Limpar</button>
-      </div>
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;display:flex;align-items:center;gap:10px">
-        <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap">ID da Planilha</label>
-        <input type="text" id="sheet-id-input" placeholder="Cole aqui o ID do Google Sheets…" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:6px;color:var(--txt);font-family:var(--fb);font-size:12px;padding:7px 12px"/>
-        <button onclick="applySheetId()" style="background:var(--a3);color:#fff;font-family:var(--fh);font-size:12px;font-weight:700;border:none;border-radius:6px;padding:7px 16px;cursor:pointer;white-space:nowrap">Conectar</button>
-        <span id="sheet-id-status" style="font-size:11px;color:var(--muted)"></span>
       </div>
       <div id="metric-picker-wrap" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Métricas visíveis nos gráficos</div>
@@ -516,9 +520,7 @@ function doLogin(){
     document.getElementById("login-screen").style.display="none";
     document.getElementById("app").style.display="block";
     if(SHEET_ID_DEFAULT!=="COLE_AQUI_O_ID_DA_PLANILHA"){
-      document.getElementById("sheet-id-input").value=SHEET_ID_DEFAULT;
       SHEET_ID_DYNAMIC=SHEET_ID_DEFAULT;
-      document.getElementById("sheet-id-status").textContent="✓ ID configurado no código";
     }
     initApp();
   } else {
@@ -548,17 +550,16 @@ function clearFilters(){
   document.getElementById("f-cat").value="";
   document.getElementById("f-sub").value="";
   document.getElementById("f-pro-search").value="";
+  selectedProducts.clear();
+  renderProductTags();
+  document.getElementById("prod-suggestions").style.display="none";
   document.getElementById("cst-s").style.display="none";
   document.getElementById("cst-e").style.display="none";
   applyFilters();
 }
 
 function applySheetId(){
-  const val=document.getElementById("sheet-id-input").value.trim();
-  if(!val){ document.getElementById("sheet-id-status").textContent="⚠ Cole um ID válido."; return; }
-  SHEET_ID_DYNAMIC=val;
-  document.getElementById("sheet-id-status").textContent="⏳ Conectando…";
-  loadAllData();
+  // ID gerenciado diretamente no código (SHEET_ID_DEFAULT)
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -617,8 +618,8 @@ async function loadAllData(){
   }
 
   document.getElementById("lupdate").textContent="Atualizado: "+new Date().toLocaleString("pt-BR");
-  document.getElementById("sheet-id-status").textContent="✓ Conectado";
   buildFilters();
+  buildProductList();
   applyFilters();
   document.getElementById("loader").style.display="none";
   document.getElementById("main-content").style.display="block";
@@ -686,9 +687,67 @@ function fillSel(id,opts){
   opts.forEach(o=>{const op=document.createElement("option");op.value=op.textContent=o;if(o===cur)op.selected=true;s.appendChild(op);});
 }
 
-function onProductSearch(){
-  // live filter on table only, full apply on button
+// ── PRODUTO MULTI-SELECT + AUTOCOMPLETE ─────────────────────
+let selectedProducts=new Set();
+let allProducts=[];
+
+function buildProductList(){
+  const seen=new Set();
+  allProducts=[];
+  raw.forEach(r=>{
+    if(!seen.has(r[C.id])){seen.add(r[C.id]);allProducts.push({id:r[C.id],ttl:r[C.ttl]||r[C.id]});}
+  });
+  allProducts.sort((a,b)=>a.ttl.localeCompare(b.ttl));
 }
+
+function onProductSearch(){
+  const q=document.getElementById("f-pro-search").value.trim().toLowerCase();
+  const cat=document.getElementById("f-cat").value;
+  const sub=document.getElementById("f-sub").value;
+  const box=document.getElementById("prod-suggestions");
+  const pool=allProducts.filter(p=>{
+    const rows=raw.filter(r=>r[C.id]===p.id);
+    if(cat&&!rows.some(r=>r[C.cat]===cat))return false;
+    if(sub&&!rows.some(r=>r[C.sub]===sub))return false;
+    return true;
+  });
+  const matches=q?pool.filter(p=>p.ttl.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)).slice(0,20):pool.slice(0,20);
+  if(!matches.length){box.style.display="none";return;}
+  box.innerHTML=matches.map((p,i)=>`<div class="prod-suggestion-item${i===0?' active':''}" onclick="selectProduct('${p.id.replace(/'/g,"\\'")}','${p.ttl.replace(/'/g,"\\'").replace(/"/g,'\"')}')">${p.ttl}<small>${p.id}</small></div>`).join("");
+  box.style.display="block";
+}
+
+function onProductKey(e){
+  if(e.key==="Escape"){document.getElementById("prod-suggestions").style.display="none";}
+  if(e.key==="Enter"){const first=document.querySelector(".prod-suggestion-item.active");if(first)first.click();e.preventDefault();}
+}
+
+function selectProduct(id,ttl){
+  selectedProducts.add(id);
+  document.getElementById("f-pro-search").value="";
+  document.getElementById("prod-suggestions").style.display="none";
+  renderProductTags();
+}
+
+function removeProduct(id){
+  selectedProducts.delete(id);
+  renderProductTags();
+}
+
+function renderProductTags(){
+  const wrap=document.getElementById("prod-tags");
+  if(!selectedProducts.size){wrap.innerHTML="";return;}
+  wrap.innerHTML=[...selectedProducts].map(id=>{
+    const p=allProducts.find(x=>x.id===id)||{ttl:id};
+    const label=p.ttl.length>30?p.ttl.substring(0,28)+"…":p.ttl;
+    return`<span class="prod-tag">${label}<button onclick="removeProduct('${id}');applyFilters()" title="Remover">×</button></span>`;
+  }).join(" ");
+}
+
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#prod-tags-wrap")&&!e.target.closest("#prod-suggestions"))
+    document.getElementById("prod-suggestions").style.display="none";
+});
 
 document.getElementById("f-per").addEventListener("change",function(){
   const c=this.value==="custom";
@@ -704,11 +763,8 @@ function applyFilters(){
   const per=document.getElementById("f-per").value;
   const cat=document.getElementById("f-cat").value;
   const sub=document.getElementById("f-sub").value;
-  const proQ=document.getElementById("f-pro-search").value.trim().toLowerCase();
-
   const today=new Date();
   let sd=null,ed=new Date(today);
-
   if(per==="custom"){
     const sv=document.getElementById("f-ds").value;
     const ev=document.getElementById("f-de").value;
@@ -718,17 +774,15 @@ function applyFilters(){
     sd=new Date(today);
     sd.setDate(sd.getDate()-parseInt(per));
   }
-
   filt=raw.filter(r=>{
     const d=new Date(r[C.date]);
     if(sd&&d<sd)return false;
     if(ed&&d>ed)return false;
     if(cat&&r[C.cat]!==cat)return false;
     if(sub&&r[C.sub]!==sub)return false;
-    if(proQ&&!(r[C.ttl]||"").toLowerCase().includes(proQ)&&!(r[C.id]||"").toLowerCase().includes(proQ))return false;
+    if(selectedProducts.size&&!selectedProducts.has(r[C.id]))return false;
     return true;
   });
-
   page=1;pageCom=1;sCol=-1;
   renderAll();
 }
@@ -937,10 +991,13 @@ function drawTimeline(){
     ]
   },{
     responsive:true,interaction:{mode:"index",intersect:false},
-    plugins:{legend:{labels:{color:"#7880a0",font:{family:"'Nunito Sans'",size:11}}}},
+    plugins:{
+      legend:{labels:{color:"#7880a0",font:{family:"'Nunito Sans'",size:11}}},
+      tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===0?"R$ "+f2(ctx.parsed.y):f2(ctx.parsed.y)+" conv."}}
+    },
     scales:{
       x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"},position:"left"},
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"},position:"left"},
       y2:{ticks:{color:"#3ecf8e",font:{size:10}},grid:{drawOnChartArea:false},position:"right"}
     }
   });
@@ -953,9 +1010,9 @@ function drawRoasChart(){
     datasets:[{label:"ROAS",data:cats.map(c=>+c.roas.toFixed(2)),
       backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:5}]
   },{responsive:true,indexAxis:"y",
-    plugins:{legend:{display:false}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>f2(ctx.parsed.x)+"x ROAS"}}},
     scales:{
-      x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
+      x:{ticks:{color:"#4a526e",font:{size:10},callback:v=>v+"x"},grid:{color:"#222840"}},
       y:{ticks:{color:"#7880a0",font:{size:11}},grid:{color:"#222840"}}
     }
   });
@@ -979,10 +1036,10 @@ function drawCtrChart(){
     labels:cats.map(c=>c.cat),
     datasets:[{label:"CTR (%)",data:cats.map(c=>+c.ctr.toFixed(2)),
       backgroundColor:"rgba(167,139,250,.6)",borderRadius:4}]
-  },{responsive:true,plugins:{legend:{display:false}},
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>f2(ctx.parsed.y)+"%"}}},
     scales:{
       x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>v+"%"},grid:{color:"#222840"}}
     }
   });
 }
@@ -993,10 +1050,10 @@ function drawCpcChart(){
     labels:cats.map(c=>c.cat),
     datasets:[{label:"CPC Médio (R$)",data:cats.map(c=>+c.cpc.toFixed(2)),
       backgroundColor:"rgba(56,189,248,.6)",borderRadius:4}]
-  },{responsive:true,plugins:{legend:{display:false}},
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>"R$ "+f2(ctx.parsed.y)}}},
     scales:{
       x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>"R$ "+f2(v)},grid:{color:"#222840"}}
     }
   });
 }
@@ -1005,13 +1062,12 @@ function drawMultiChart(){
   const map={};
   filt.forEach(r=>{
     const k=gKey(r[C.date]);
-    if(!map[k]) map[k]={cst:0,imp:0,cli:0,ctr:0,cpm:0,cpc:0,cnv:0,vcv:0,roas:0,tc:0,_n:0};
+    if(!map[k]) map[k]={cst:0,imp:0,cli:0,ctr:0,cpm:0,cpc:0,cnv:0,vcv:0,roas:0,tc:0};
     map[k].cst+=parseFloat(r[C.cst])||0;
     map[k].imp+=parseFloat(r[C.imp])||0;
     map[k].cli+=parseFloat(r[C.cli])||0;
     map[k].cnv+=parseFloat(r[C.cnv])||0;
     map[k].vcv+=parseFloat(r[C.vcv])||0;
-    map[k]._n++;
   });
   const lbls=Object.keys(map).sort();
   lbls.forEach(k=>{
@@ -1023,17 +1079,29 @@ function drawMultiChart(){
     d.tc=d.cli>0?(d.cnv/d.cli)*100:0;
   });
 
-  const metricMap={cst:C.cst,imp:C.imp,cli:C.cli,ctr:"ctr",cpm:"cpm",cpc:"cpc",cnv:"cnv",vcv:"vcv",roas:"roas",tc:"tc"};
   const colMap={cst:"#4f8ef7",imp:"#38bdf8",cli:"#3ecf8e",ctr:"#a78bfa",cpm:"#f7c94f",cpc:"#f75f8e",cnv:"#fb923c",vcv:"#34d399",roas:"#818cf8",tc:"#f472b6"};
+
+  // Normaliza cada métrica para 0-100 (índice) para comparação visual justa
+  const rawVals={};
+  const maxVals={};
+  [...activeMetrics].forEach(mk=>{
+    rawVals[mk]=lbls.map(k=>+(map[k][mk]||0).toFixed(4));
+    maxVals[mk]=Math.max(...rawVals[mk])||1;
+  });
 
   const datasets=[...activeMetrics].map((mk,i)=>{
     const meta=ALL_METRICS.find(m=>m.k===mk);
     const col=colMap[mk]||PALETTE[i%PALETTE.length];
+    // Dados normalizados 0-100
+    const normalized=rawVals[mk].map(v=>(v/maxVals[mk]*100));
     return {
       label:meta?meta.lbl:mk,
-      data:lbls.map(k=>+(map[k][mk]||0).toFixed(2)),
-      borderColor:col,backgroundColor:col.replace(")",",0.1)").replace("rgb","rgba"),
-      tension:.4,fill:false,pointRadius:3,yAxisID:"y"+(i===0?"":"2")
+      data:normalized,
+      rawData:rawVals[mk],
+      borderColor:col,
+      backgroundColor:col+"22",
+      tension:.4,fill:false,pointRadius:4,pointHoverRadius:6,
+      borderWidth:2,
     };
   });
 
@@ -1044,12 +1112,31 @@ function drawMultiChart(){
     type:"line",
     data:{labels:lbls,datasets},
     options:{
-      responsive:true,interaction:{mode:"index",intersect:false},
-      plugins:{legend:{labels:{color:"#7880a0",font:{size:11}}}},
+      responsive:true,
+      interaction:{mode:"index",intersect:false},
+      plugins:{
+        legend:{labels:{color:"#7880a0",font:{family:"'Nunito Sans'",size:11}}},
+        tooltip:{
+          callbacks:{
+            label(ctx){
+              const mk=[...activeMetrics][ctx.datasetIndex];
+              const raw=ctx.dataset.rawData?ctx.dataset.rawData[ctx.dataIndex]:ctx.parsed.y;
+              return` ${ctx.dataset.label}: ${fmtMetric(mk,raw)}`;
+            }
+          }
+        }
+      },
       scales:{
         x:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}},
-        y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"},position:"left"},
-        y2:{ticks:{color:"#7880a0",font:{size:10}},grid:{drawOnChartArea:false},position:"right"}
+        y:{
+          ticks:{
+            color:"#4a526e",font:{size:10},
+            callback:v=>v.toFixed(0)+"%"
+          },
+          grid:{color:"#222840"},
+          title:{display:true,text:"Índice normalizado (0–100%)",color:"#4a526e",font:{size:9}},
+          min:0,max:105
+        }
       }
     }
   });
@@ -1062,10 +1149,10 @@ function drawTaxaConvChart(){
     datasets:[{label:"Taxa Conv. (%)",data:cats.map(c=>+c.tc.toFixed(2)),
       backgroundColor:cats.map(c=>c.tc>=2?"rgba(62,207,142,.65)":c.tc>=1?"rgba(247,201,79,.65)":"rgba(247,95,142,.65)"),
       borderRadius:5}]
-  },{responsive:true,plugins:{legend:{display:false}},
+  },{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>f2(ctx.parsed.y)+"%"}}},
     scales:{
       x:{ticks:{color:"#4a526e",font:{size:9}},grid:{color:"#222840"}},
-      y:{ticks:{color:"#4a526e",font:{size:10}},grid:{color:"#222840"}}
+      y:{ticks:{color:"#4a526e",font:{size:10},callback:v=>v+"%"},grid:{color:"#222840"}}
     }
   });
 }
@@ -1196,10 +1283,10 @@ function renderComTop10(){
 // ══════════════════════════════════════════════════════════════
 // Thresholds para badges
 function cpcBadge(v){
-  if(v<=0) return `<span>${f2(v)}</span>`;
-  if(v<=0.5) return `<span class="badge-green">${f2(v)}</span>`;
-  if(v<=2)   return `<span class="badge-yellow">${f2(v)}</span>`;
-  return `<span class="badge-red">${f2(v)}</span>`;
+  if(v<=0) return `<span>R$ ${f2(v)}</span>`;
+  if(v<=0.5) return `<span class="badge-green">R$ ${f2(v)}</span>`;
+  if(v<=2)   return `<span class="badge-yellow">R$ ${f2(v)}</span>`;
+  return `<span class="badge-red">R$ ${f2(v)}</span>`;
 }
 function ctrBadge(v){
   if(v>=3) return `<span class="badge-green">${f2(v)}%</span>`;
@@ -1218,9 +1305,9 @@ function tcBadge(v){
   return `<span class="badge-red">${f2(v)}%</span>`;
 }
 function cpmBadge(v){
-  if(v<=10) return `<span class="badge-green">${f2(v)}</span>`;
-  if(v<=30) return `<span class="badge-yellow">${f2(v)}</span>`;
-  return `<span class="badge-red">${f2(v)}</span>`;
+  if(v<=10) return `<span class="badge-green">R$ ${f2(v)}</span>`;
+  if(v<=30) return `<span class="badge-yellow">R$ ${f2(v)}</span>`;
+  return `<span class="badge-red">R$ ${f2(v)}</span>`;
 }
 
 const TCOLS=[
@@ -1229,15 +1316,15 @@ const TCOLS=[
   {h:"Título",   c:C.ttl,   t:"s"},
   {h:"Categoria",c:C.cat,   t:"s"},
   {h:"Subcat.",  c:C.sub,   t:"s"},
-  {h:"Custo",    c:C.cst,   t:"n"},
+  {h:"Custo",    c:C.cst,   t:"brl"},
   {h:"Impressões",c:C.imp,  t:"i"},
   {h:"CPM",      c:C.cpm,   t:"badge-cpm"},
   {h:"Cliques",  c:C.cli,   t:"i"},
   {h:"CTR %",    c:C.ctr,   t:"badge-ctr"},
   {h:"CPC",      c:C.cpc,   t:"badge-cpc"},
   {h:"Conversões",c:C.cnv,  t:"n"},
-  {h:"Custo/Conv.",c:C.cpc2,t:"n"},
-  {h:"Val.Conv.",c:C.vcv,   t:"n"},
+  {h:"Custo/Conv.",c:C.cpc2,t:"brl"},
+  {h:"Val.Conv.",c:C.vcv,   t:"brl"},
   {h:"ROAS",     c:C.roas,  t:"badge-roas"},
   {h:"Taxa Conv.",c:C.tc,   t:"badge-tc"},
 ];
@@ -1269,6 +1356,7 @@ function renderTbl(){
       const n=parseFloat(v)||0;
       if(cl.t==="i")   return`<td class="n">${fi(n)}</td>`;
       if(cl.t==="n")   return`<td class="n">${f2(n)}</td>`;
+      if(cl.t==="brl")  return`<td class="n">R$ ${f2(n)}</td>`;
       if(cl.t==="badge-cpc")  return`<td class="n">${cpcBadge(n)}</td>`;
       if(cl.t==="badge-ctr")  return`<td class="n">${ctrBadge(n)}</td>`;
       if(cl.t==="badge-roas") return`<td class="n">${roasBadge(n)}</td>`;
@@ -1302,7 +1390,7 @@ const COM_COLS=[
   {h:"Impressões",  c:C.imp, t:"i"},
   {h:"Cliques",     c:C.cli, t:"i"},
   {h:"Conversões",  c:C.cnv, t:"n"},
-  {h:"Val. Conversão",c:C.vcv,t:"n"},
+  {h:"Val. Conversão",c:C.vcv,t:"brl"},
   {h:"Taxa Conv. %",c:C.tc,  t:"badge-tc"},
 ];
 let sColCom=-1,sAscCom=true;
@@ -1338,6 +1426,7 @@ function renderComTable(){
       const n=parseFloat(v)||0;
       if(cl.t==="i") return`<td class="n">${fi(n)}</td>`;
       if(cl.t==="n") return`<td class="n">${f2(n)}</td>`;
+      if(cl.t==="brl") return`<td class="n">R$ ${f2(n)}</td>`;
       if(cl.t==="badge-tc") return`<td class="n">${tcBadge(n)}</td>`;
       if(cl.c===C.cat) return`<td class="cat">${v||"—"}</td>`;
       if(cl.c===C.sub) return`<td class="sub">${v||"—"}</td>`;
@@ -1361,6 +1450,19 @@ function pgCom(d){pageCom+=d;renderComTable();}
 function f2(v){return Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fi(v){return Math.round(v).toLocaleString("pt-BR")}
 function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v}
+
+// Formata valor com prefixo/sufixo correto por chave de métrica
+const METRIC_FMT={
+  cst:{pre:"R$ ",suf:""},imp:{pre:"",suf:""},cli:{pre:"",suf:""},
+  ctr:{pre:"",suf:"%"},cpm:{pre:"R$ ",suf:""},cpc:{pre:"R$ ",suf:""},
+  cnv:{pre:"",suf:""},vcv:{pre:"R$ ",suf:""},roas:{pre:"",suf:"x"},tc:{pre:"",suf:"%"},
+  cpc2:{pre:"R$ ",suf:""},
+};
+function fmtMetric(mk,v){
+  const fmt=METRIC_FMT[mk]||{pre:"",suf:""};
+  const isInt=mk==="imp"||mk==="cli";
+  return fmt.pre+(isInt?fi(v):f2(v))+fmt.suf;
+}
 </script>
 </body>
 </html>
