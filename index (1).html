@@ -1,500 +1,142 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>ECOMM — Performance Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ECOMM — Performance Dashboard</title>
 
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#0b0d13;--surf:#111420;--card:#181b26;--border:#1f2336;--border2:#2a2f47;
-      --a1:#5b8def;--a2:#e05b9d;--a3:#42e09f;--a4:#f0c45b;--a5:#a35bf0;
-      --muted:#4e566e;--dim:#7b839e;--txt:#dde2f0;
-      --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;--r:10px;
-    }
-    html{scroll-behavior:smooth}
-    body{font-family:var(--fm);background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
-    body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");opacity:.6}
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Mono&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
-    header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
-      padding:26px 40px 22px;border-bottom:1px solid var(--border);
-      background:linear-gradient(135deg,#0b0d13 50%,#0e1220)}
-    .brand h1{font-family:var(--fh);font-size:20px;font-weight:800;letter-spacing:-.3px;
-      background:linear-gradient(100deg,var(--a1) 30%,var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .brand p{font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:.7px;text-transform:uppercase}
-    #hstatus{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
-    .dot{width:7px;height:7px;border-radius:50%;background:var(--a3);animation:pulse 2.2s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
-
-    .wrap{position:relative;z-index:1;max-width:1640px;margin:0 auto;padding:32px 40px}
-
-    #loader{display:flex;flex-direction:column;align-items:center;justify-content:center;
-      min-height:55vh;gap:14px;font-family:var(--fh);font-size:14px;color:var(--muted)}
-    .spin{width:34px;height:34px;border:2.5px solid var(--border2);border-top-color:var(--a1);
-      border-radius:50%;animation:rot .75s linear infinite}
-    @keyframes rot{to{transform:rotate(360deg)}}
-
-    #errmsg{display:none;background:rgba(224,91,157,.08);border:1px solid var(--a2);
-      border-radius:var(--r);padding:22px 26px;color:var(--a2);font-size:13px;line-height:1.7;margin-bottom:24px}
-
-    #main{display:none}
-
-    /* ── Filtros ── */
-    .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;
-      background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
-      padding:18px 22px;margin-bottom:28px}
-    .fg label{display:block;font-size:10px;color:var(--muted);letter-spacing:.7px;
-      text-transform:uppercase;margin-bottom:7px}
-    .fg select,.fg input[type=date]{width:100%;background:var(--card);border:1px solid var(--border);
-      border-radius:6px;color:var(--txt);font-family:var(--fm);font-size:12.5px;
-      padding:8px 11px;appearance:none;cursor:pointer;transition:border-color .18s}
-    .fg select:focus,.fg input:focus{outline:none;border-color:var(--a1)}
-    .fg select option{background:var(--card)}
-    .btn-apply{align-self:flex-end;width:100%;background:var(--a1);color:#fff;
-      font-family:var(--fh);font-size:13px;font-weight:700;border:none;border-radius:6px;
-      padding:9px 18px;cursor:pointer;letter-spacing:.2px;transition:opacity .18s,transform .1s}
-    .btn-apply:hover{opacity:.82}
-    .btn-apply:active{transform:scale(.97)}
-
-    .slabel{font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;
-      letter-spacing:1px;color:var(--muted);margin-bottom:14px}
-
-    /* ── KPIs ── */
-    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-bottom:28px}
-    .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-      padding:16px 18px;position:relative;overflow:hidden;transition:border-color .18s,transform .18s}
-    .kpi:hover{border-color:var(--border2);transform:translateY(-2px)}
-    .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-    .kpi.k1::before{background:var(--a1)}.kpi.k2::before{background:var(--a2)}
-    .kpi.k3::before{background:var(--a3)}.kpi.k4::before{background:var(--a4)}
-    .kpi.k5::before{background:var(--a5)}.kpi.k6::before{background:#5be0e8}
-    .kpi.k7::before{background:#f07a5b}.kpi.k8::before{background:#5bf0b0}
-    .kpi-lbl{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
-    .kpi-val{font-family:var(--fh);font-size:22px;font-weight:700;line-height:1}
-    .kpi-unit{font-size:10px;color:var(--muted);margin-top:5px}
-
-    /* ── Charts ── */
-    .charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px}
-    @media(max-width:860px){.charts{grid-template-columns:1fr}}
-    .chcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px}
-    canvas{display:block;max-height:230px}
-
-    /* ── Tabela ── */
-    .tcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:28px}
-    .thead2{padding:16px 22px;border-bottom:1px solid var(--border);
-      display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-    .tsearch{background:var(--surf);border:1px solid var(--border);border-radius:6px;
-      color:var(--txt);font-family:var(--fm);font-size:12px;padding:7px 12px;width:210px;transition:border-color .18s}
-    .tsearch:focus{outline:none;border-color:var(--a1)}
-    .twrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;font-size:11.5px}
-    thead th{background:var(--surf);padding:9px 13px;text-align:left;font-size:9.5px;font-weight:500;
-      text-transform:uppercase;letter-spacing:.6px;color:var(--muted);white-space:nowrap;
-      cursor:pointer;user-select:none;border-bottom:1px solid var(--border);transition:color .18s}
-    thead th:hover{color:var(--a1)}
-    thead th.srt{color:var(--a1)}
-    tbody tr{border-bottom:1px solid var(--border);transition:background .13s}
-    tbody tr:hover{background:rgba(91,141,239,.05)}
-    td{padding:8px 13px;white-space:nowrap}
-    td.n{text-align:right;font-variant-numeric:tabular-nums}
-    td.d{color:var(--dim);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
-    .pag{display:flex;align-items:center;gap:8px;padding:13px 22px;
-      border-top:1px solid var(--border);font-size:11.5px;color:var(--muted)}
-    .pag button{background:var(--surf);border:1px solid var(--border);color:var(--txt);
-      border-radius:5px;padding:5px 12px;cursor:pointer;font-family:var(--fm);font-size:11.5px;transition:border-color .18s}
-    .pag button:hover{border-color:var(--a1)}
-    .pag button:disabled{opacity:.3;cursor:default}
-
-    ::-webkit-scrollbar{width:5px;height:5px}
-    ::-webkit-scrollbar-track{background:var(--bg)}
-    ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-  </style>
+<style>
+body{background:#0b0d13;color:#dde2f0;font-family:'DM Mono';padding:20px}
+select,button{padding:6px;margin:5px}
+.kpis{display:flex;gap:15px;margin:20px 0}
+.kpi{background:#181b26;padding:15px;border-radius:8px}
+table{width:100%;margin-top:20px;font-size:12px}
+td,th{padding:6px;text-align:left}
+canvas{margin-top:20px}
+</style>
 </head>
+
 <body>
 
-<header>
-  <div class="brand">
-    <h1>ECOMM Performance</h1>
-    <p>Google Ads · Campanhas ECOMM · Performance por Categoria</p>
-  </div>
-  <div id="hstatus"><span class="dot"></span><span id="lupdate">Carregando…</span></div>
-</header>
+<h2>ECOMM Performance</h2>
+<p id="status">Carregando...</p>
 
-<div class="wrap">
-  <div id="loader"><div class="spin"></div><span>Buscando dados da planilha…</span></div>
-  <div id="errmsg"></div>
-
-  <div id="main">
-
-    <!-- FILTROS -->
-    <div class="filters">
-      <div class="fg">
-        <label>Período</label>
-        <select id="f-per">
-          <option value="7">Últimos 7 dias</option>
-          <option value="15" selected>Últimos 15 dias</option>
-          <option value="30">Últimos 30 dias</option>
-          <option value="custom">Personalizado</option>
-        </select>
-      </div>
-      <div class="fg" id="cst-s" style="display:none">
-        <label>Data Início</label><input type="date" id="f-ds"/>
-      </div>
-      <div class="fg" id="cst-e" style="display:none">
-        <label>Data Fim</label><input type="date" id="f-de"/>
-      </div>
-      <div class="fg">
-        <label>Agrupamento</label>
-        <select id="f-grp">
-          <option value="day">Por dia</option>
-          <option value="week">Por semana</option>
-          <option value="month">Por mês</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>Categoria</label>
-        <select id="f-cat"><option value="">Todas</option></select>
-      </div>
-      <div class="fg">
-        <label>Subcategoria</label>
-        <select id="f-sub"><option value="">Todas</option></select>
-      </div>
-      <div class="fg">
-        <label>Produto</label>
-        <select id="f-pro"><option value="">Todos</option></select>
-      </div>
-      <div class="fg">
-        <button class="btn-apply" onclick="apply()">Aplicar filtros</button>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <p class="slabel">Visão Geral</p>
-    <div class="kpis">
-      <div class="kpi k1"><div class="kpi-lbl">Custo Total</div><div class="kpi-val" id="k-cst">—</div><div class="kpi-unit">R$</div></div>
-      <div class="kpi k2"><div class="kpi-lbl">Impressões</div><div class="kpi-val" id="k-imp">—</div></div>
-      <div class="kpi k3"><div class="kpi-lbl">Cliques</div><div class="kpi-val" id="k-cli">—</div></div>
-      <div class="kpi k4"><div class="kpi-lbl">CTR Médio</div><div class="kpi-val" id="k-ctr">—</div><div class="kpi-unit">%</div></div>
-      <div class="kpi k5"><div class="kpi-lbl">Conversões</div><div class="kpi-val" id="k-cnv">—</div></div>
-      <div class="kpi k6"><div class="kpi-lbl">ROAS</div><div class="kpi-val" id="k-ros">—</div><div class="kpi-unit">×</div></div>
-      <div class="kpi k7"><div class="kpi-lbl">Valor Conversão</div><div class="kpi-val" id="k-vcv">—</div><div class="kpi-unit">R$</div></div>
-      <div class="kpi k8"><div class="kpi-lbl">CPC Médio</div><div class="kpi-val" id="k-cpc">—</div><div class="kpi-unit">R$</div></div>
-    </div>
-
-    <!-- CHARTS -->
-    <div class="charts">
-      <div class="chcard">
-        <p class="slabel">Custo × Conversões — tempo</p>
-        <canvas id="ch-time"></canvas>
-      </div>
-      <div class="chcard">
-        <p class="slabel">ROAS por Categoria</p>
-        <canvas id="ch-roas"></canvas>
-      </div>
-    </div>
-
-    <!-- TABELA -->
-    <div class="tcard">
-      <div class="thead2">
-        <p class="slabel" style="margin:0">Detalhe por Produto</p>
-        <input class="tsearch" type="text" id="tsrch" placeholder="Buscar título ou ID…" oninput="renderTbl()"/>
-      </div>
-      <div class="twrap"><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
-      <div class="pag">
-        <button id="bpv" onclick="pg(-1)">← Anterior</button>
-        <span id="pinfo"></span>
-        <button id="bnx" onclick="pg(1)">Próximo →</button>
-        <span style="margin-left:auto" id="rcnt"></span>
-      </div>
-    </div>
-
-  </div><!-- /main -->
+<div>
+<select id="cat"></select>
+<select id="sub"></select>
+<button onclick="apply()">Filtrar</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<div class="kpis">
+<div class="kpi">Custo: <span id="cst"></span></div>
+<div class="kpi">Cliques: <span id="cli"></span></div>
+<div class="kpi">Conv: <span id="cnv"></span></div>
+<div class="kpi">ROAS: <span id="roas"></span></div>
+</div>
+
+<canvas id="chart"></canvas>
+
+<table border="1">
+<thead>
+<tr><th>Data</th><th>Produto</th><th>Custo</th><th>Conv</th></tr>
+</thead>
+<tbody id="tb"></tbody>
+</table>
+
 <script>
-// ══════════════════════════════════════════════════════
-//  ⚙️  CONFIGURAÇÃO — edite apenas o ID da planilha
-// ══════════════════════════════════════════════════════
-const SHEET_ID  = "1xR3KXz4R0RvFx37rhXR-CqRM8YtJFPJoXIOWvR_6BG0";
-const SHEET_TAB = "2026-04";
 
-// ══════════════════════════════════════════════════════
-//  MAPEAMENTO DE COLUNAS (0-based, sem coluna Campanha)
-//  A=0  B=1   C=2    D=3    E=4   F=5  G=6  H=7
-//  Data IDItem Título Cat(L1) Sub  L3   L4   L5
-//  I=8    J=9    K=10  L=11   M=12  N=13   O=14     P=15        Q=16      R=17  S=18
-//  Custo  Imp    CPM   Cli    CTR   CPC    Conversões CustConv  ValConv  ROAS  TaxaConv
-// ══════════════════════════════════════════════════════
-const C={
-  date:0, id:1, ttl:2, cat:3, sub:4, l3:5, l4:6, l5:7,
-  cst:8, imp:9, cpm:10, cli:11, ctr:12, cpc:13,
-  cnv:14, cpc2:15, vcv:16, roas:17, tc:18
-};
+const SHEET_ID="1xR3KXz4R0RvFx37rhXR-CqRM8YtJFPJoXIOWvR_6BG0";
+const TAB="2026-04";
 
-let raw=[], filt=[], page=1, sCol=-1, sAsc=true, chTime=null, chRoas=null;
-const PS=50;
+let raw=[],filt=[];
 
-// ── Carregar dados ──────────────────────────────────
-async function loadData(){
-  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
-  try{
-    const r=await fetch(url);
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    raw=parseCSV(await r.text());
-    document.getElementById("lupdate").textContent="Atualizado: "+new Date().toLocaleString("pt-BR");
-    buildFilters();
-    apply();
-    document.getElementById("loader").style.display="none";
-    document.getElementById("main").style.display="block";
-  }catch(e){
-    document.getElementById("loader").style.display="none";
-    const el=document.getElementById("errmsg");
-    el.style.display="block";
-    el.innerHTML=`<strong>Erro ao carregar dados.</strong><br>
-Verifique:<br>
-• ID da planilha correto (variável SHEET_ID no index.html)<br>
-• Planilha compartilhada como <em>Qualquer pessoa com o link → Leitor</em><br>
-• Nome da aba: <strong>${SHEET_TAB}</strong><br><br>Detalhe: ${e.message}`;
-  }
+async function load(){
+
+  const url=`https://opensheet.elk.sh/${SHEET_ID}/${TAB}`;
+
+  const res=await fetch(url);
+  const data=await res.json();
+
+  raw=data.map(r=>({
+    date:r["Data"],
+    cat:r["Cat(L1)"],
+    sub:r["Sub"],
+    title:r["Título"],
+    cst:+r["Custo"]||0,
+    cli:+r["Cli"]||0,
+    cnv:+r["Conversões"]||0,
+    vcv:+r["ValConv"]||0
+  }));
+
+  document.getElementById("status").innerText="Atualizado "+new Date().toLocaleString();
+
+  buildFilters();
+  apply();
 }
 
-function parseCSV(txt){
-  const lines=txt.trim().split("\n"), out=[];
-  for(let i=1;i<lines.length;i++){
-    const cols=[];let cur="",inQ=false;
-    for(let j=0;j<lines[i].length;j++){
-      const ch=lines[i][j];
-      if(ch==='"'){inQ=!inQ}
-      else if(ch===','&&!inQ){cols.push(cur.trim());cur="";}
-      else cur+=ch;
-    }
-    cols.push(cur.trim());
-    if(cols.length>=9) out.push(cols);
-  }
-  return out;
-}
-
-// ── Filtros ─────────────────────────────────────────
 function buildFilters(){
-  fillSel("f-cat",[...new Set(raw.map(r=>r[C.cat]).filter(Boolean))].sort());
-  fillSel("f-sub",[...new Set(raw.map(r=>r[C.sub]).filter(Boolean))].sort());
-  fillSel("f-pro",[...new Set(raw.map(r=>r[C.ttl]).filter(Boolean))].sort(),"Todos");
+  const cats=[...new Set(raw.map(r=>r.cat))];
+  document.getElementById("cat").innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option>${c}</option>`);
+
+  document.getElementById("cat").onchange=()=>{
+    const c=document.getElementById("cat").value;
+    const subs=[...new Set(raw.filter(r=>!c||r.cat===c).map(r=>r.sub))];
+    document.getElementById("sub").innerHTML='<option value="">Todas</option>'+subs.map(s=>`<option>${s}</option>`);
+  }
 }
-
-function fillSel(id,opts,all="Todas"){
-  const s=document.getElementById(id),cur=s.value;
-  s.innerHTML=`<option value="">${all}</option>`;
-  opts.forEach(o=>{const op=document.createElement("option");op.value=op.textContent=o;if(o===cur)op.selected=true;s.appendChild(op);});
-}
-
-document.getElementById("f-per").addEventListener("change",function(){
-  const c=this.value==="custom";
-  document.getElementById("cst-s").style.display=c?"":"none";
-  document.getElementById("cst-e").style.display=c?"":"none";
-});
-
-// Cascata: categoria → subcategoria → produto
-document.getElementById("f-cat").addEventListener("change",function(){
-  const cat=this.value;
-  fillSel("f-sub",[...new Set(raw.filter(r=>!cat||r[C.cat]===cat).map(r=>r[C.sub]).filter(Boolean))].sort());
-  fillSel("f-pro",[...new Set(raw.filter(r=>!cat||r[C.cat]===cat).map(r=>r[C.ttl]).filter(Boolean))].sort(),"Todos");
-});
-
-document.getElementById("f-sub").addEventListener("change",function(){
-  const cat=document.getElementById("f-cat").value,sub=this.value;
-  fillSel("f-pro",[...new Set(
-    raw.filter(r=>(!cat||r[C.cat]===cat)&&(!sub||r[C.sub]===sub)).map(r=>r[C.ttl]).filter(Boolean)
-  )].sort(),"Todos");
-});
 
 function apply(){
-  const per=document.getElementById("f-per").value;
-  const grp=document.getElementById("f-grp").value;
-  const cat=document.getElementById("f-cat").value;
-  const sub=document.getElementById("f-sub").value;
-  const pro=document.getElementById("f-pro").value;
+  const c=document.getElementById("cat").value;
+  const s=document.getElementById("sub").value;
 
-  const today=new Date();
-  let sd=null,ed=new Date(today);
+  filt=raw.filter(r=>(!c||r.cat===c)&&(!s||r.sub===s));
 
-  if(per==="custom"){
-    const sv=document.getElementById("f-ds").value;
-    const ev=document.getElementById("f-de").value;
-    if(sv) sd=new Date(sv);
-    if(ev) ed=new Date(ev);
-  }else{
-    sd=new Date(today);sd.setDate(sd.getDate()-parseInt(per));
-  }
-
-  filt=raw.filter(r=>{
-    const d=new Date(r[C.date]);
-    if(sd&&d<sd) return false;
-    if(ed&&d>ed) return false;
-    if(cat&&r[C.cat]!==cat) return false;
-    if(sub&&r[C.sub]!==sub) return false;
-    if(pro&&r[C.ttl]!==pro) return false;
-    return true;
-  });
-
-  updKPIs();drawCharts(grp);page=1;renderTbl();
+  render();
 }
 
-// ── KPIs ────────────────────────────────────────────
-function updKPIs(){
-  if(!filt.length){
-    ["k-cst","k-imp","k-cli","k-ctr","k-cnv","k-ros","k-vcv","k-cpc"]
-      .forEach(id=>document.getElementById(id).textContent="—");return;
-  }
-  const S=col=>filt.reduce((a,r)=>a+(parseFloat(r[col])||0),0);
-  const cst=S(C.cst),imp=S(C.imp),cli=S(C.cli),cnv=S(C.cnv),vcv=S(C.vcv);
-  const ctr=imp>0?(cli/imp)*100:0;
-  const cpc=cli>0?cst/cli:0;
-  const roas=cst>0?vcv/cst:0;
-  set("k-cst",f2(cst));set("k-imp",fi(imp));set("k-cli",fi(cli));
-  set("k-ctr",f2(ctr));set("k-cnv",f2(cnv));set("k-ros",f2(roas));
-  set("k-vcv",f2(vcv));set("k-cpc",f2(cpc));
-}
-function set(id,v){document.getElementById(id).textContent=v}
+function render(){
 
-// ── Charts ──────────────────────────────────────────
-function gKey(ds,grp){
-  const d=new Date(ds);
-  if(grp==="month") return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-  if(grp==="week"){const s=new Date(d);s.setDate(d.getDate()-d.getDay());return fd(s);}
-  return ds;
-}
-function fd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+  const sum=(k)=>filt.reduce((a,r)=>a+r[k],0);
 
-const PAL=["#5b8def","#e05b9d","#42e09f","#f0c45b","#a35bf0","#5be0e8","#f07a5b","#5bf0b0","#f0a35b","#5b9df0"];
+  const cst=sum("cst"),cli=sum("cli"),cnv=sum("cnv"),vcv=sum("vcv");
 
-function drawCharts(grp){
-  // Timeline custo x conversões
-  const tm={};
+  document.getElementById("cst").innerText=cst.toFixed(2);
+  document.getElementById("cli").innerText=cli;
+  document.getElementById("cnv").innerText=cnv;
+  document.getElementById("roas").innerText=(vcv/cst||0).toFixed(2);
+
+  // tabela
+  document.getElementById("tb").innerHTML=filt.slice(0,50).map(r=>
+    `<tr><td>${r.date}</td><td>${r.title}</td><td>${r.cst}</td><td>${r.cnv}</td></tr>`
+  ).join("");
+
+  // gráfico
+  const map={};
   filt.forEach(r=>{
-    const k=gKey(r[C.date],grp);
-    if(!tm[k]) tm[k]={c:0,cv:0};
-    tm[k].c+=parseFloat(r[C.cst])||0;
-    tm[k].cv+=parseFloat(r[C.cnv])||0;
-  });
-  const tl=Object.keys(tm).sort();
-
-  const ctx1=document.getElementById("ch-time").getContext("2d");
-  if(chTime) chTime.destroy();
-  chTime=new Chart(ctx1,{
-    data:{labels:tl,datasets:[
-      {type:"bar",label:"Custo (R$)",data:tl.map(k=>+tm[k].c.toFixed(2)),
-        backgroundColor:"rgba(91,141,239,.5)",borderRadius:4,yAxisID:"y"},
-      {type:"line",label:"Conversões",data:tl.map(k=>+tm[k].cv.toFixed(2)),
-        borderColor:"#42e09f",backgroundColor:"rgba(66,224,159,.08)",
-        tension:.4,pointRadius:3,fill:true,yAxisID:"y2"}
-    ]},
-    options:{responsive:true,interaction:{mode:"index",intersect:false},
-      plugins:{legend:{labels:{color:"#7b839e",font:{family:"'DM Mono'",size:11}}}},
-      scales:{
-        x:{ticks:{color:"#4e566e",font:{family:"'DM Mono'",size:10}},grid:{color:"#1f2336"}},
-        y:{ticks:{color:"#4e566e",font:{family:"'DM Mono'",size:10}},grid:{color:"#1f2336"},position:"left"},
-        y2:{ticks:{color:"#42e09f",font:{family:"'DM Mono'",size:10}},grid:{drawOnChartArea:false},position:"right"}
-      }}
+    if(!map[r.date]) map[r.date]={c:0,cv:0};
+    map[r.date].c+=r.cst;
+    map[r.date].cv+=r.cnv;
   });
 
-  // ROAS por categoria
-  const rm={};
-  filt.forEach(r=>{
-    const k=r[C.cat]||"(sem cat)";
-    if(!rm[k]) rm[k]={c:0,v:0};
-    rm[k].c+=parseFloat(r[C.cst])||0;
-    rm[k].v+=parseFloat(r[C.vcv])||0;
-  });
-  const rl=Object.keys(rm).sort();
+  const labels=Object.keys(map);
 
-  const ctx2=document.getElementById("ch-roas").getContext("2d");
-  if(chRoas) chRoas.destroy();
-  chRoas=new Chart(ctx2,{
-    type:"bar",
-    data:{labels:rl,datasets:[{label:"ROAS",
-      data:rl.map(k=>rm[k].c>0?+(rm[k].v/rm[k].c).toFixed(2):0),
-      backgroundColor:rl.map((_,i)=>PAL[i%PAL.length]),borderRadius:5}]},
-    options:{responsive:true,indexAxis:"y",
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{ticks:{color:"#4e566e",font:{family:"'DM Mono'",size:10}},grid:{color:"#1f2336"}},
-        y:{ticks:{color:"#7b839e",font:{family:"'DM Mono'",size:11}},grid:{color:"#1f2336"}}
-      }}
+  new Chart(document.getElementById("chart"),{
+    data:{
+      labels,
+      datasets:[
+        {type:"bar",label:"Custo",data:labels.map(l=>map[l].c)},
+        {type:"line",label:"Conv",data:labels.map(l=>map[l].cv)}
+      ]
+    }
   });
 }
 
-// ── Tabela ──────────────────────────────────────────
-const TCOLS=[
-  {h:"Data",         c:C.date, t:"s"},
-  {h:"ID Item",      c:C.id,   t:"s"},
-  {h:"Título",       c:C.ttl,  t:"s"},
-  {h:"Categoria",    c:C.cat,  t:"s"},
-  {h:"Subcategoria", c:C.sub,  t:"s"},
-  {h:"Custo",        c:C.cst,  t:"n"},
-  {h:"Impressões",   c:C.imp,  t:"i"},
-  {h:"CPM",          c:C.cpm,  t:"n"},
-  {h:"Cliques",      c:C.cli,  t:"i"},
-  {h:"CTR %",        c:C.ctr,  t:"n"},
-  {h:"CPC",          c:C.cpc,  t:"n"},
-  {h:"Conversões",   c:C.cnv,  t:"n"},
-  {h:"Custo/Conv.",  c:C.cpc2, t:"n"},
-  {h:"Val. Conv.",   c:C.vcv,  t:"n"},
-  {h:"ROAS",         c:C.roas, t:"n"},
-  {h:"Taxa Conv. %", c:C.tc,   t:"n"}
-];
+load();
 
-function renderTbl(){
-  const q=document.getElementById("tsrch").value.toLowerCase();
-  let rows=filt.filter(r=>!q||(r[C.ttl]||"").toLowerCase().includes(q)||(r[C.id]||"").toLowerCase().includes(q));
-
-  if(sCol>=0){
-    const {c,t}=TCOLS[sCol];
-    rows=[...rows].sort((a,b)=>{
-      const va=t==="s"?a[c]:(parseFloat(a[c])||0);
-      const vb=t==="s"?b[c]:(parseFloat(b[c])||0);
-      return sAsc?(va>vb?1:-1):(va<vb?1:-1);
-    });
-  }
-
-  const tot=rows.length;
-  const sl=rows.slice((page-1)*PS,(page-1)*PS+PS);
-
-  document.getElementById("th").innerHTML="<tr>"+TCOLS.map((cl,i)=>
-    `<th onclick="sortBy(${i})" class="${sCol===i?'srt':''}">${cl.h}${sCol===i?(sAsc?" ↑":" ↓"):""}</th>`
-  ).join("")+"</tr>";
-
-  const tb=document.getElementById("tb");
-  if(!sl.length){
-    tb.innerHTML=`<tr><td colspan="${TCOLS.length}" style="text-align:center;padding:30px;color:var(--muted)">Nenhum dado para os filtros selecionados.</td></tr>`;
-  }else{
-    tb.innerHTML=sl.map(r=>"<tr>"+TCOLS.map(cl=>{
-      const v=r[cl.c];
-      if(cl.t==="i") return`<td class="n">${fi(parseFloat(v)||0)}</td>`;
-      if(cl.t==="n") return`<td class="n">${f2(parseFloat(v)||0)}</td>`;
-      const dim=cl.c===C.ttl;
-      return`<td class="${dim?"d":""}">${v||"—"}</td>`;
-    }).join("")+"</tr>").join("");
-  }
-
-  const tp=Math.max(1,Math.ceil(tot/PS));
-  document.getElementById("pinfo").textContent=`Página ${page} de ${tp}`;
-  document.getElementById("rcnt").textContent=`${tot.toLocaleString("pt-BR")} registros`;
-  document.getElementById("bpv").disabled=page<=1;
-  document.getElementById("bnx").disabled=page>=tp;
-}
-
-function sortBy(i){if(sCol===i)sAsc=!sAsc;else{sCol=i;sAsc=true;}renderTbl();}
-function pg(d){page+=d;renderTbl();}
-
-function f2(v){return Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
-function fi(v){return Math.round(v).toLocaleString("pt-BR")}
-
-loadData();
 </script>
+
 </body>
 </html>
